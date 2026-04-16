@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katsu Midori TH Calculator</title>
+    <style>
+        :root {
+            --red: #e74c3c;
+            --blue: #3498db;
+            --green: #2ecc71;
+            --yellow: #f1c40f;
+            --brown: #5d4037;
+            --pink: #ff9ff3;
+            --grey: #95a5a6;
+            --white-gold: #f5f6fa;
+            --red-gold: #880000;
+            --solid-gold: #d4af37;
+            --blue-checkered: #2980b9;
+            --black-gold: #1a1a1a;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --accent: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin: 0 0 1.5rem 0;
+            font-size: 1.5rem;
+        }
+
+        .budget-section {
+            margin-bottom: 1.5rem;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid #eee;
+        }
+
+        .budget-section label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .budget-section input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            text-align: right;
+        }
+
+        .plate-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .plate-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .plate-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .plate-color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f1f1f1;
+            border-radius: 20px;
+            padding: 2px;
+        }
+
+        .ctrl-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .btn-minus { background: #fff; color: #e74c3c; }
+        .btn-plus { background: var(--accent); color: #fff; }
+        .ctrl-btn:hover { opacity: 0.8; }
+        .ctrl-btn:active { transform: scale(0.95); }
+
+        .count-display {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s;
+        }
+
+        .summary.near-budget {
+            background-color: #fffaf0;
+            border-color: #fbd38d;
+        }
+
+        .summary.over-budget {
+            background-color: #fff5f5;
+            border-color: #feb2b2;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
+        }
+
+        .summary.over-budget .total {
+            color: #e74c3c;
+        }
+
+        .progress-container {
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--green);
+            transition: width 0.3s, background-color 0.3s;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .row.remaining {
+            font-size: 0.85rem;
+            font-style: italic;
+            display: none;
+        }
+
+        .row.total {
+            border-top: 2px solid #333;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #000;
+        }
+
+        .status-msg {
+            text-align: center;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .near-budget .status-msg.warning-near {
+            display: block;
+            color: #dd6b20;
+        }
+
+        .over-budget .status-msg.warning-over {
+            display: block;
+            color: #e74c3c;
+        }
+
+        .btn-reset {
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 12px;
+            border: none;
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            transition: background 0.2s;
+        }
+
+        .btn-reset:hover { background: #d0d0d0; }
+
+        /* Specific Plate Colors */
+        .dot-red { background-color: var(--red); }
+        .dot-blue { background-color: var(--blue); }
+        .dot-green { background-color: var(--green); }
+        .dot-yellow { background-color: var(--yellow); }
+        .dot-brown { background-color: var(--brown); }
+        .dot-pink { background-color: var(--pink); }
+        .dot-grey { background-color: var(--grey); }
+        .dot-white-gold { background-color: #fff; border: 2px solid var(--solid-gold); }
+        .dot-red-gold { background-color: var(--red-gold); border: 2px solid var(--solid-gold); }
+        .dot-solid-gold { background-color: var(--solid-gold); }
+        .dot-blue-check { background-image: repeating-conic-gradient(#2980b9 0% 25%, #3498db 0% 50%) 50% / 10px 10px; }
+        .dot-black-gold { background-color: var(--black-gold); border: 2px solid var(--solid-gold); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍣 Katsu Midori Calc</h1>
+
+    <div class="budget-section">
+        <label for="targetPrice">Budget (฿):</label>
+        <input type="number" id="targetPrice" placeholder="e.g. 1000" oninput="updateUI()" min="0" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+    </div>
+    
+    <div class="plate-grid">
+        <!-- Generated by JS for cleaner code, but defining one for structure -->
+        <div id="plates-container" style="display: contents;"></div>
+    </div>
+
+    <div class="summary" id="summaryBox">
+        <div class="row">
+            <span>Subtotal:</span>
+            <span>฿<span id="subtotal">0.00</span></span>
+        </div>
+        <div class="row">
+            <span>Service Charge (10%):</span>
+            <span>฿<span id="service">0.00</span></span>
+        </div>
+        <div class="row">
+            <span>VAT (7%):</span>
+            <span>฿<span id="vat">0.00</span></span>
+        </div>
+
+        <div class="progress-container" id="progContainer">
+            <div class="progress-bar" id="progBar"></div>
+        </div>
+
+        <div class="row remaining" id="remRow">
+            <span>Remaining:</span>
+            <span>฿<span id="remaining">0.00</span></span>
+        </div>
+
+        <div class="row total">
+            <span>Total:</span>
+            <span>฿<span id="total">0.00</span></span>
+        </div>
+        <div class="status-msg warning-near">⚠️ Getting close to budget!</div>
+        <div class="status-msg warning-over">🚫 Over Budget!</div>
+    </div>
+
+    <button class="btn-reset" onclick="reset()">Clear All</button>
+</div>
+
+<script>
+    const plateData = [
+        { id: 'red', price: 40, label: 'Red' },
+        { id: 'blue', price: 50, label: 'Blue' },
+        { id: 'green', price: 60, label: 'Green' },
+        { id: 'yellow', price: 70, label: 'Yellow' },
+        { id: 'brown', price: 80, label: 'Brown' },
+        { id: 'pink', price: 90, label: 'Pink' },
+        { id: 'grey', price: 100, label: 'Grey' },
+        { id: 'white-gold', price: 120, label: 'White-Gold' },
+        { id: 'red-gold', price: 140, label: 'Red-Gold' },
+        { id: 'solid-gold', price: 150, label: 'Solid Gold' },
+        { id: 'blue-check', price: 160, label: 'Blue Check' },
+        { id: 'black-gold', price: 180, label: 'Black-Gold' }
+    ];
+
+    const counts = {};
+    let subtotal = 0;
+
+    // Initialize counts and render grid
+    const container = document.getElementById('plates-container');
+    plateData.forEach(plate => {
+        counts[plate.id] = 0;
+        
+        const card = document.createElement('div');
+        card.className = 'plate-card';
+        card.innerHTML = `
+            <div class="plate-info">
+                <div class="plate-color-dot dot-${plate.id}"></div>
+                <span>฿${plate.price}</span>
+            </div>
+            <div class="controls-row">
+                <button class="ctrl-btn btn-minus" onclick="changeCount('${plate.id}', -1, ${plate.price})">−</button>
+                <div class="count-display" id="count-${plate.id}">0</div>
+                <button class="ctrl-btn btn-plus" onclick="changeCount('${plate.id}', 1, ${plate.price})">+</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    function changeCount(id, delta, price) {
+        const newCount = counts[id] + delta;
+        if (newCount < 0) return;
+        
+        counts[id] = newCount;
+        subtotal += (delta * price);
+        
+        document.getElementById(`count-${id}`).innerText = newCount;
+        updateUI();
+    }
+
+    function reset() {
+        subtotal = 0;
+        plateData.forEach(plate => {
+            counts[plate.id] = 0;
+            document.getElementById(`count-${plate.id}`).innerText = '0';
+        });
+        updateUI();
+    }
+
+    function updateUI() {
+        const service = subtotal * 0.10;
+        const vat = (subtotal + service) * 0.07;
+        const total = subtotal + service + vat;
+        const target = parseFloat(document.getElementById('targetPrice').value) || 0;
+
+        document.getElementById('subtotal').innerText = subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('service').innerText = service.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('vat').innerText = vat.toLocaleString('en-US', {minimumFractionDigits: 2});
+        document.getElementById('total').innerText = total.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+        const summaryBox = document.getElementById('summaryBox');
+        const progContainer = document.getElementById('progContainer');
+        const progBar = document.getElementById('progBar');
+        const remRow = document.getElementById('remRow');
+        const remVal = document.getElementById('remaining');
+
+        if (target > 0) {
+            progContainer.style.display = 'block';
+            remRow.style.display = 'flex';
+            
+            const percent = Math.min((total / target) * 100, 100);
+            progBar.style.width = percent + '%';
+            
+            const remaining = target - total;
+            remVal.innerText = remaining.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+            summaryBox.classList.remove('near-budget', 'over-budget');
+            if (total > target) {
+                summaryBox.classList.add('over-budget');
+                progBar.style.backgroundColor = '#e74c3c';
+            } else if (total > target * 0.8) {
+                summaryBox.classList.add('near-budget');
+                progBar.style.backgroundColor = '#f1c40f';
+            } else {
+                progBar.style.backgroundColor = '#2ecc71';
+            }
+        } else {
+            progContainer.style.display = 'none';
+            remRow.style.display = 'none';
+            summaryBox.classList.remove('near-budget', 'over-budget');
+        }
+    }
+</script>
+
+</body>
+</html>
