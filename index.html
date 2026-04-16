@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaiten Sushi Calc</title>
+    <title>Kaiten Sushi Calculator</title>
     <!-- Sushi Favicon -->
     <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f363.png">
     <style>
@@ -388,7 +388,7 @@
 <div class="container">
     <div class="header">
         <h1>🍣 
-            <select id="restaurantSelect" onchange="initApp()">
+            <select id="restaurantSelect" onchange="switchRestaurant()">
                 <option value="katsu">Katsu Midori</option>
                 <option value="sushiro">Sushiro</option>
             </select>
@@ -397,7 +397,7 @@
 
     <div class="budget-section">
         <label for="targetPrice">Budget (฿):</label>
-        <input type="number" id="targetPrice" placeholder="e.g. 1000" oninput="updateUI()" min="0" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+        <input type="number" id="targetPrice" placeholder="e.g. 1000" oninput="updateUI(); saveData()" min="0" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
     </div>
     
     <div id="plates-container" class="plate-grid"></div>
@@ -405,7 +405,7 @@
     <div class="custom-section">
         <h3>
             <span>➕ Special Menu</span>
-            <small style="font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(other than the normal dish price)</small>
+            <small style="display: block; font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(other than the normal dish price)</small>
         </h3>
         <div class="custom-input-group">
             <input type="text" id="customName" class="input-name" placeholder="Item name">
@@ -424,7 +424,7 @@
             <span>Service Charge (10%):</span>
             <span>฿<span id="service">0.00</span></span>
         </div>
-        <!-- VAT Row (Hidden for Sushiro/Midori as it's included in price) -->
+        <!-- VAT Row (Hidden as it's included in price) -->
         <div class="row" id="vatRow" style="display: none;">
             <span>VAT (7%):</span>
             <span>฿<span id="vat">0.00</span></span>
@@ -474,25 +474,67 @@
         ]
     };
 
-    let currentCounts = {};
-    let plateSubtotal = 0;
-    let customItems = [];
+    // State structure to hold data for both restaurants
+    let state = {
+        timestamp: Date.now(),
+        lastActive: 'katsu',
+        targetPrice: '',
+        data: {
+            katsu: { counts: {}, plateSubtotal: 0, customItems: [] },
+            sushiro: { counts: {}, plateSubtotal: 0, customItems: [] }
+        }
+    };
 
-    function initApp() {
+    function saveData() {
+        state.timestamp = Date.now();
+        state.lastActive = document.getElementById('restaurantSelect').value;
+        state.targetPrice = document.getElementById('targetPrice').value;
+        localStorage.setItem('sushi_calc_v2', JSON.stringify(state));
+    }
+
+    function loadData() {
+        const saved = localStorage.getItem('sushi_calc_v2');
+        if (!saved) return false;
+
+        const loadedState = JSON.parse(saved);
+        const sixHours = 6 * 60 * 60 * 1000;
+        
+        if (Date.now() - loadedState.timestamp > sixHours) {
+            localStorage.removeItem('sushi_calc_v2');
+            return false;
+        }
+
+        state = loadedState;
+        document.getElementById('restaurantSelect').value = state.lastActive;
+        document.getElementById('targetPrice').value = state.targetPrice;
+        
+        initApp(true);
+        return true;
+    }
+
+    function switchRestaurant() {
+        saveData(); // Save current before switching
+        initApp(true);
+    }
+
+    function initApp(isSwitching = false) {
         const type = document.getElementById('restaurantSelect').value;
         const plateData = restaurants[type];
         const container = document.getElementById('plates-container');
         
-        // Reset state
         container.innerHTML = '';
-        currentCounts = {};
-        plateSubtotal = 0;
-        customItems = [];
-        document.getElementById('customItemsList').innerHTML = '';
         
-        // Render plates
+        // Ensure state data exists for this type
+        if (!state.data[type]) {
+            state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
+        }
+
+        const currentData = state.data[type];
+        
         plateData.forEach(plate => {
-            currentCounts[plate.id] = 0;
+            if (currentData.counts[plate.id] === undefined) {
+                currentData.counts[plate.id] = 0;
+            }
             
             const card = document.createElement('div');
             card.className = 'plate-card';
@@ -503,54 +545,69 @@
                 </div>
                 <div class="controls-row">
                     <button class="ctrl-btn btn-minus" onclick="changeCount('${plate.id}', -1, ${plate.price})">−</button>
-                    <div class="count-display" id="count-${plate.id}">0</div>
+                    <div class="count-display" id="count-${plate.id}">${currentData.counts[plate.id]}</div>
                     <button class="ctrl-btn btn-plus" onclick="changeCount('${plate.id}', 1, ${plate.price})">+</button>
                 </div>
             `;
             container.appendChild(card);
         });
         
+        renderCustomList();
         updateUI();
+        if (!isSwitching) saveData();
     }
 
     function changeCount(id, delta, price) {
-        const newCount = currentCounts[id] + delta;
+        const type = document.getElementById('restaurantSelect').value;
+        const currentData = state.data[type];
+        
+        const newCount = (currentData.counts[id] || 0) + delta;
         if (newCount < 0) return;
         
-        currentCounts[id] = newCount;
-        plateSubtotal += (delta * price);
+        currentData.counts[id] = newCount;
+        currentData.plateSubtotal += (delta * price);
         
         document.getElementById(`count-${id}`).innerText = newCount;
         updateUI();
+        saveData();
     }
 
     function addCustomItem() {
+        const type = document.getElementById('restaurantSelect').value;
+        const currentData = state.data[type];
+        
         const nameInput = document.getElementById('customName');
         const priceInput = document.getElementById('customPrice');
         const name = nameInput.value.trim() || 'Extra Item';
         const price = parseFloat(priceInput.value) || 0;
 
         if (price > 0) {
-            const item = { id: Date.now(), name, price };
-            customItems.push(item);
-            
+            currentData.customItems.push({ id: Date.now(), name, price });
             nameInput.value = '';
             priceInput.value = '';
             renderCustomList();
             updateUI();
+            saveData();
         }
     }
 
     function removeCustomItem(id) {
-        customItems = customItems.filter(item => item.id !== id);
+        const type = document.getElementById('restaurantSelect').value;
+        const currentData = state.data[type];
+        
+        currentData.customItems = currentData.customItems.filter(item => item.id !== id);
         renderCustomList();
         updateUI();
+        saveData();
     }
 
     function renderCustomList() {
+        const type = document.getElementById('restaurantSelect').value;
+        const currentData = state.data[type];
         const list = document.getElementById('customItemsList');
+        
         list.innerHTML = '';
-        customItems.forEach(item => {
+        currentData.customItems.forEach(item => {
             const div = document.createElement('div');
             div.className = 'custom-item';
             div.innerHTML = `
@@ -562,24 +619,25 @@
     }
 
     function reset() {
-        plateSubtotal = 0;
-        customItems = [];
-        for (let id in currentCounts) {
-            currentCounts[id] = 0;
-            const el = document.getElementById(`count-${id}`);
-            if (el) el.innerText = '0';
-        }
-        renderCustomList();
-        updateUI();
+        if (!confirm('Clear all items for THIS restaurant?')) return;
+        
+        const type = document.getElementById('restaurantSelect').value;
+        state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
+        
+        // Keep budget (optional: clear it too if you prefer)
+        // state.targetPrice = ''; 
+        // document.getElementById('targetPrice').value = '';
+
+        initApp(true);
+        saveData();
     }
 
     function updateUI() {
         const type = document.getElementById('restaurantSelect').value;
-        const customSubtotal = customItems.reduce((sum, item) => sum + item.price, 0);
-        const subtotal = plateSubtotal + customSubtotal;
+        const currentData = state.data[type];
         
-        // Since both Sushiro and Katsu Midori include VAT in menu price:
-        // Final Total = Subtotal + (Subtotal * 0.10)
+        const customSubtotal = currentData.customItems.reduce((sum, item) => sum + item.price, 0);
+        const subtotal = currentData.plateSubtotal + customSubtotal;
         const service = subtotal * 0.10;
         const total = subtotal + service;
         const target = parseFloat(document.getElementById('targetPrice').value) || 0;
@@ -598,10 +656,8 @@
         if (target > 0) {
             progContainer.style.display = 'block';
             remRow.style.display = 'flex';
-            
             const percent = Math.min((total / target) * 100, 100);
             progBar.style.width = percent + '%';
-            
             const diff = target - total;
             remVal.innerText = Math.abs(diff).toLocaleString('en-US', {minimumFractionDigits: 2});
 
@@ -626,7 +682,9 @@
         }
     }
 
-    window.onload = initApp;
+    window.onload = () => {
+        if (!loadData()) initApp();
+    };
 </script>
 
 </body>
