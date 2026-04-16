@@ -399,7 +399,7 @@
 
     <div class="budget-section">
         <label for="targetPrice">Budget (฿):</label>
-        <input type="number" id="targetPrice" placeholder="e.g. 1000" oninput="updateUI(); saveData()" min="0" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+        <input type="text" id="targetPrice" placeholder="e.g. 1,000" oninput="formatBudget(this); updateUI(); saveData()" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
     </div>
     
     <div id="plates-container" class="plate-grid"></div>
@@ -440,6 +440,11 @@
         <div class="row remaining" id="remRow">
             <span id="remLabel">Remaining:</span>
             <span>฿<span id="remaining">0.00</span></span>
+        </div>
+
+        <div id="affordabilitySection" style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 10px; display: none;">
+            <div style="font-size: 0.7rem; color: #aaa; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">You can still eat:</div>
+            <div id="affordabilityList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
         </div>
 
         <div class="row total">
@@ -487,6 +492,19 @@
             sushiro: { counts: {}, plateSubtotal: 0, customItems: [] }
         }
     };
+
+    function formatBudget(input) {
+        let value = input.value.replace(/,/g, '');
+        if (value === '' || isNaN(value)) {
+            input.value = '';
+            return;
+        }
+        input.value = Number(value).toLocaleString('en-US');
+    }
+
+    function getBudgetValue() {
+        return parseFloat(document.getElementById('targetPrice').value.replace(/,/g, '')) || 0;
+    }
 
     function saveData() {
         state.timestamp = Date.now();
@@ -666,7 +684,7 @@
         const subtotal = currentData.plateSubtotal + customSubtotal;
         const service = subtotal * 0.10;
         const total = subtotal + service;
-        const target = parseFloat(document.getElementById('targetPrice').value) || 0;
+        const target = getBudgetValue();
 
         document.getElementById('subtotal').innerText = subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
         document.getElementById('service').innerText = service.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -688,10 +706,15 @@
             remVal.innerText = Math.abs(diff).toLocaleString('en-US', {minimumFractionDigits: 2});
 
             summaryBox.classList.remove('near-budget', 'over-budget');
+            
+            const affordSection = document.getElementById('affordabilitySection');
+            const affordList = document.getElementById('affordabilityList');
+
             if (total > target) {
                 summaryBox.classList.add('over-budget');
                 progBar.style.backgroundColor = '#e74c3c';
                 remLabel.innerText = 'Over:';
+                affordSection.style.display = 'none';
             } else {
                 remLabel.innerText = 'Remaining:';
                 if (total > target * 0.8) {
@@ -700,10 +723,40 @@
                 } else {
                     progBar.style.backgroundColor = '#2ecc71';
                 }
+
+                // Affordability Logic
+                affordSection.style.display = 'block';
+                affordList.innerHTML = '';
+                
+                const availableForFood = diff / 1.10;
+                const plateData = restaurants[type];
+                
+                let itemsAdded = 0;
+                plateData.forEach(plate => {
+                    const count = Math.floor(availableForFood / plate.price);
+                    if (count > 0) {
+                        const item = document.createElement('div');
+                        item.style.display = 'flex';
+                        item.style.alignItems = 'center';
+                        item.style.gap = '4px';
+                        item.style.fontSize = '0.75rem';
+                        item.style.background = '#fff';
+                        item.style.padding = '3px 8px';
+                        item.style.borderRadius = '12px';
+                        item.style.border = '1px solid #f0f0f0';
+                        item.style.boxShadow = '0 1px 2px rgba(0,0,0,0.02)';
+                        item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:10px; height:10px;"></div> <b>${count}</b>`;
+                        affordList.appendChild(item);
+                        itemsAdded++;
+                    }
+                });
+                
+                if (itemsAdded === 0) affordSection.style.display = 'none';
             }
         } else {
             progContainer.style.display = 'none';
             remRow.style.display = 'none';
+            document.getElementById('affordabilitySection').style.display = 'none';
             summaryBox.classList.remove('near-budget', 'over-budget');
         }
     }
