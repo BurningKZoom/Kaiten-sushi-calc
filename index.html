@@ -209,8 +209,8 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             display: flex;
-            align-items: center;
-            gap: 5px;
+            flex-direction: column;
+            align-items: flex-start;
         }
 
         .custom-input-group {
@@ -226,7 +226,7 @@
             border-radius: 8px;
             font-size: 0.9rem;
             outline-color: var(--accent);
-            min-width: 0; /* Prevents input from overflowing flex container */
+            min-width: 0;
         }
 
         .input-name { flex: 2 1 150px; }
@@ -403,7 +403,10 @@
     <div id="plates-container" class="plate-grid"></div>
 
     <div class="custom-section">
-        <h3>➕ Special Menu <small style="display: block; font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(other than the normal dish price)</small></h3>
+        <h3>
+            <span>➕ Special Menu</span>
+            <small style="font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(other than the normal dish price)</small>
+        </h3>
         <div class="custom-input-group">
             <input type="text" id="customName" class="input-name" placeholder="Item name">
             <input type="number" id="customPrice" class="input-price" placeholder="Price" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
@@ -421,7 +424,8 @@
             <span>Service Charge (10%):</span>
             <span>฿<span id="service">0.00</span></span>
         </div>
-        <div class="row">
+        <!-- VAT Row (Hidden for Sushiro/Midori as it's included in price) -->
+        <div class="row" id="vatRow" style="display: none;">
             <span>VAT (7%):</span>
             <span>฿<span id="vat">0.00</span></span>
         </div>
@@ -570,17 +574,18 @@
     }
 
     function updateUI() {
+        const type = document.getElementById('restaurantSelect').value;
         const customSubtotal = customItems.reduce((sum, item) => sum + item.price, 0);
         const subtotal = plateSubtotal + customSubtotal;
         
+        // Since both Sushiro and Katsu Midori include VAT in menu price:
+        // Final Total = Subtotal + (Subtotal * 0.10)
         const service = subtotal * 0.10;
-        const vat = (subtotal + service) * 0.07;
-        const total = subtotal + service + vat;
+        const total = subtotal + service;
         const target = parseFloat(document.getElementById('targetPrice').value) || 0;
 
         document.getElementById('subtotal').innerText = subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
         document.getElementById('service').innerText = service.toLocaleString('en-US', {minimumFractionDigits: 2});
-        document.getElementById('vat').innerText = vat.toLocaleString('en-US', {minimumFractionDigits: 2});
         document.getElementById('total').innerText = total.toLocaleString('en-US', {minimumFractionDigits: 2});
 
         const summaryBox = document.getElementById('summaryBox');
