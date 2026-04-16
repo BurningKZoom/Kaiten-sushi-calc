@@ -229,8 +229,9 @@
             min-width: 0;
         }
 
-        .input-name { flex: 2 1 150px; }
-        .input-price { flex: 1 1 80px; }
+        .input-name { flex: 2 1 120px; }
+        .input-price { flex: 1 1 60px; }
+        .input-qty { flex: 0 1 50px; text-align: center; }
 
         .btn-add-custom {
             padding: 10px 15px;
@@ -377,6 +378,7 @@
         .dot-black-gold { background-color: var(--black-gold); border: 2px solid var(--solid-gold); }
 
         /* Sushiro Plate Colors */
+        .dot-s-white { background-color: #fff; border: 1px solid #ddd; }
         .dot-s-red { background-color: var(--sushiro-red); }
         .dot-s-silver { background-color: var(--sushiro-silver); }
         .dot-s-gold { background-color: var(--sushiro-gold); }
@@ -410,6 +412,7 @@
         <div class="custom-input-group">
             <input type="text" id="customName" class="input-name" placeholder="Item name">
             <input type="number" id="customPrice" class="input-price" placeholder="Price" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+            <input type="number" id="customQty" class="input-qty" value="1" min="1" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
             <button class="btn-add-custom" onclick="addCustomItem()">Add</button>
         </div>
         <div id="customItemsList" class="custom-items-list"></div>
@@ -467,6 +470,7 @@
             { id: 'black-gold', price: 180, label: 'Black-Gold' }
         ],
         sushiro: [
+            { id: 's-white', price: 30, label: 'White' },
             { id: 's-red', price: 40, label: 'Red' },
             { id: 's-silver', price: 60, label: 'Silver' },
             { id: 's-gold', price: 80, label: 'Gold' },
@@ -474,7 +478,6 @@
         ]
     };
 
-    // State structure to hold data for both restaurants
     let state = {
         timestamp: Date.now(),
         lastActive: 'katsu',
@@ -513,7 +516,7 @@
     }
 
     function switchRestaurant() {
-        saveData(); // Save current before switching
+        saveData();
         initApp(true);
     }
 
@@ -523,8 +526,6 @@
         const container = document.getElementById('plates-container');
         
         container.innerHTML = '';
-        
-        // Ensure state data exists for this type
         if (!state.data[type]) {
             state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
         }
@@ -560,7 +561,6 @@
     function changeCount(id, delta, price) {
         const type = document.getElementById('restaurantSelect').value;
         const currentData = state.data[type];
-        
         const newCount = (currentData.counts[id] || 0) + delta;
         if (newCount < 0) return;
         
@@ -578,13 +578,17 @@
         
         const nameInput = document.getElementById('customName');
         const priceInput = document.getElementById('customPrice');
+        const qtyInput = document.getElementById('customQty');
+        
         const name = nameInput.value.trim() || 'Extra Item';
         const price = parseFloat(priceInput.value) || 0;
+        const qty = parseInt(qtyInput.value) || 1;
 
-        if (price > 0) {
-            currentData.customItems.push({ id: Date.now(), name, price });
+        if (price > 0 && qty > 0) {
+            currentData.customItems.push({ id: Date.now(), name, price, qty });
             nameInput.value = '';
             priceInput.value = '';
+            qtyInput.value = '1';
             renderCustomList();
             updateUI();
             saveData();
@@ -594,11 +598,28 @@
     function removeCustomItem(id) {
         const type = document.getElementById('restaurantSelect').value;
         const currentData = state.data[type];
-        
         currentData.customItems = currentData.customItems.filter(item => item.id !== id);
         renderCustomList();
         updateUI();
         saveData();
+    }
+
+    function changeCustomQty(id, delta) {
+        const type = document.getElementById('restaurantSelect').value;
+        const currentData = state.data[type];
+        const item = currentData.customItems.find(i => i.id === id);
+        
+        if (item) {
+            const newQty = item.qty + delta;
+            if (newQty <= 0) {
+                removeCustomItem(id);
+            } else {
+                item.qty = newQty;
+                renderCustomList();
+                updateUI();
+                saveData();
+            }
+        }
     }
 
     function renderCustomList() {
@@ -610,8 +631,20 @@
         currentData.customItems.forEach(item => {
             const div = document.createElement('div');
             div.className = 'custom-item';
+            div.style.alignItems = 'center';
             div.innerHTML = `
-                <span>${item.name} (฿${item.price})</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+                    <div style="color: #aaa; font-size: 0.7rem;">฿${item.price.toLocaleString()}/unit</div>
+                </div>
+                <div class="controls-row" style="padding: 1px; min-width: 85px; margin: 0 10px;">
+                    <button class="ctrl-btn btn-minus" style="width: 24px; height: 24px; font-size: 0.9rem;" onclick="changeCustomQty(${item.id}, -1)">−</button>
+                    <div class="count-display" style="font-size: 0.85rem; min-width: 20px;">${item.qty}</div>
+                    <button class="ctrl-btn btn-plus" style="width: 24px; height: 24px; font-size: 0.9rem;" onclick="changeCustomQty(${item.id}, 1)">+</button>
+                </div>
+                <div style="font-weight: bold; font-size: 0.85rem; min-width: 60px; text-align: right; margin-right: 5px;">
+                    ฿${(item.price * item.qty).toLocaleString()}
+                </div>
                 <button class="btn-remove-custom" onclick="removeCustomItem(${item.id})">×</button>
             `;
             list.appendChild(div);
@@ -620,14 +653,8 @@
 
     function reset() {
         if (!confirm('Clear all items for THIS restaurant?')) return;
-        
         const type = document.getElementById('restaurantSelect').value;
         state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
-        
-        // Keep budget (optional: clear it too if you prefer)
-        // state.targetPrice = ''; 
-        // document.getElementById('targetPrice').value = '';
-
         initApp(true);
         saveData();
     }
@@ -635,8 +662,7 @@
     function updateUI() {
         const type = document.getElementById('restaurantSelect').value;
         const currentData = state.data[type];
-        
-        const customSubtotal = currentData.customItems.reduce((sum, item) => sum + item.price, 0);
+        const customSubtotal = currentData.customItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
         const subtotal = currentData.plateSubtotal + customSubtotal;
         const service = subtotal * 0.10;
         const total = subtotal + service;
