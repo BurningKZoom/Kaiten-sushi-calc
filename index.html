@@ -157,6 +157,8 @@
             height: 22px;
             border-radius: 50%;
             border: 1px solid rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         .controls-row {
@@ -191,6 +193,52 @@
             font-size: 1.1rem;
             min-width: 35px;
             text-align: center;
+        }
+
+        /* TOWER STYLES */
+        .stack {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            width: 70px;
+            padding-bottom: 5px;
+        }
+
+        .visual-plate {
+            width: 60px;
+            height: 12px;
+            border-radius: 50% / 40%;
+            margin-bottom: -8px;
+            border: 1px solid rgba(0,0,0,0.15);
+            position: relative;
+            background-color: #fff;
+            box-sizing: content-box;
+            z-index: 1;
+        }
+
+        /* Plain colors for tower plates */
+        .dot-white, .dot-s-white { background-color: #fff; border: 1px solid #ddd; }
+        .dot-red, .dot-s-red { background-color: var(--red); }
+        .dot-blue { background-color: var(--blue); }
+        .dot-green { background-color: var(--green); }
+        .dot-yellow { background-color: var(--yellow); }
+        .dot-brown { background-color: #5d4037; }
+        .dot-pink { background-color: var(--pink); }
+        .dot-grey { background-color: var(--grey); }
+        .dot-white-gold { background-color: #fff; border: 1.5px solid #d4af37; }
+        .dot-red-gold { background-color: #880000; border: 1.5px solid #d4af37; }
+        .dot-solid-gold, .dot-s-gold { background-color: #d4af37; border: 1px solid #b8860b; }
+        .dot-blue-check { 
+            background-color: #2980b9;
+            background-image: repeating-conic-gradient(#2980b9 0% 25%, #3498db 0% 50%);
+            background-size: 8px 8px;
+        }
+        .dot-black-gold, .dot-s-black { background-color: #1a1a1a; border: 1.5px solid #d4af37; }
+        .dot-s-silver { background-color: #bdc3c7; }
+
+        @keyframes dropIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .custom-section {
@@ -404,6 +452,17 @@
     
     <div id="plates-container" class="plate-grid"></div>
 
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; margin-bottom: 5px; padding: 0 10px;">
+        <h3 style="margin: 0; font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em;">🍣 Plate Tower</h3>
+        <button id="towerModeBtn" onclick="toggleTowerMode()" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #ddd; background: #fff; font-size: 0.75rem; cursor: pointer; color: #666; font-weight: bold;">Separate Stacks</button>
+    </div>
+    <div id="towerContainer" style="display: flex; background: #fff; border-radius: 12px; border: 1px solid #eee; min-height: 120px; padding: 15px; gap: 15px; overflow-x: auto; align-items: flex-end;">
+        <div id="plateTower" style="flex: 1; display: flex; justify-content: center; align-items: flex-end; gap: 15px;"></div>
+        <div id="towerSummary" style="width: 80px; border-left: 1px solid #eee; padding-left: 15px; display: none; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto;">
+            <!-- Individual plate counts for combined mode -->
+        </div>
+    </div>
+
     <div class="custom-section">
         <h3>
             <span>➕ Special Menu</span>
@@ -487,6 +546,7 @@
         timestamp: Date.now(),
         lastActive: 'katsu',
         targetPrice: '',
+        towerMode: 'combined',
         data: {
             katsu: { counts: {}, plateSubtotal: 0, customItems: [] },
             sushiro: { counts: {}, plateSubtotal: 0, customItems: [] }
@@ -528,9 +588,21 @@
         state = loadedState;
         document.getElementById('restaurantSelect').value = state.lastActive;
         document.getElementById('targetPrice').value = state.targetPrice;
+        if (state.towerMode) {
+            const label = state.towerMode === 'combined' ? 'Separate Stacks' : 'Combined Stack';
+            document.getElementById('towerModeBtn').innerText = label;
+        }
         
         initApp(true);
         return true;
+    }
+
+    function toggleTowerMode() {
+        state.towerMode = state.towerMode === 'combined' ? 'split' : 'combined';
+        const label = state.towerMode === 'combined' ? 'Separate Stacks' : 'Combined Stack';
+        document.getElementById('towerModeBtn').innerText = label;
+        renderTower();
+        saveData();
     }
 
     function switchRestaurant() {
@@ -571,6 +643,7 @@
             container.appendChild(card);
         });
         
+        renderTower();
         renderCustomList();
         updateUI();
         if (!isSwitching) saveData();
@@ -586,8 +659,109 @@
         currentData.plateSubtotal += (delta * price);
         
         document.getElementById(`count-${id}`).innerText = newCount;
+        renderTower();
         updateUI();
         saveData();
+    }
+
+    function renderTower() {
+        const type = document.getElementById('restaurantSelect').value;
+        const counts = state.data[type].counts;
+        const tower = document.getElementById('plateTower');
+        const summary = document.getElementById('towerSummary');
+        tower.innerHTML = '';
+        summary.innerHTML = '';
+
+        if (state.towerMode === 'combined') {
+            summary.style.display = 'flex';
+            let allPlates = [];
+            let totalCount = 0;
+            const plateData = restaurants[type];
+
+            plateData.forEach(plate => {
+                const count = counts[plate.id] || 0;
+                if (count > 0) {
+                    totalCount += count;
+                    for (let i = 0; i < count; i++) { allPlates.push(plate.id); }
+                    const item = document.createElement('div');
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.gap = '8px';
+                    item.style.fontSize = '0.75rem';
+                    item.style.whiteSpace = 'nowrap';
+                    item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:12px !important; height:12px !important; border-width:1px !important; border-radius: 50% !important;"></div> <span style="min-width:15px"><b>${count}</b></span>`;
+                    summary.appendChild(item);
+                }
+            });
+
+            if (allPlates.length === 0) {
+                tower.innerHTML = '<span style="color:#ccc; font-style:italic; font-size:0.8rem;">Plate stack will appear here</span>';
+                summary.style.display = 'none';
+                return;
+            }
+
+            const stackContainer = document.createElement('div');
+            stackContainer.style.display = 'flex';
+            stackContainer.style.flexDirection = 'column';
+            stackContainer.style.alignItems = 'center';
+
+            const totalLabel = document.createElement('div');
+            totalLabel.style.fontSize = '0.75rem';
+            totalLabel.style.fontWeight = 'bold';
+            totalLabel.style.marginBottom = '8px';
+            totalLabel.style.color = 'var(--accent)';
+            totalLabel.innerText = `Total: ${totalCount}`;
+            stackContainer.appendChild(totalLabel);
+
+            const stack = document.createElement('div');
+            stack.className = 'stack';
+            allPlates.forEach(id => {
+                const plate = document.createElement('div');
+                plate.className = `visual-plate dot-${id}`;
+                stack.appendChild(plate);
+            });
+            stackContainer.appendChild(stack);
+            tower.appendChild(stackContainer);
+
+        } else {
+            summary.style.display = 'none';
+            const plateData = restaurants[type];
+            let stacksCreated = 0;
+
+            plateData.forEach(plate => {
+                const count = counts[plate.id] || 0;
+                if (count > 0) {
+                    const stackContainer = document.createElement('div');
+                    stackContainer.style.display = 'flex';
+                    stackContainer.style.flexDirection = 'column';
+                    stackContainer.style.alignItems = 'center';
+                    stackContainer.style.minWidth = '60px';
+
+                    const label = document.createElement('div');
+                    label.style.fontSize = '0.7rem';
+                    label.style.fontWeight = 'bold';
+                    label.style.marginBottom = '5px';
+                    label.style.color = '#888';
+                    label.innerText = `x${count}`;
+                    stackContainer.appendChild(label);
+
+                    const stack = document.createElement('div');
+                    stack.className = 'stack';
+                    for (let i = 0; i < count; i++) {
+                        const p = document.createElement('div');
+                        p.className = `visual-plate dot-${plate.id}`;
+                        stack.appendChild(p);
+                    }
+                    stackContainer.appendChild(stack);
+                    tower.appendChild(stackContainer);
+                    stacksCreated++;
+                }
+            });
+
+            if (stacksCreated === 0) {
+                tower.innerHTML = '<span style="color:#ccc; font-style:italic; font-size:0.8rem;">Plate stack will appear here</span>';
+            }
+        }
     }
 
     function addCustomItem() {
