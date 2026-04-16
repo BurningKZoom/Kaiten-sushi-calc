@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Katsu Midori TH Calculator</title>
+    <title>Kaiten Sushi Calc</title>
+    <!-- Sushi Favicon -->
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f363.png">
     <style>
         :root {
             --red: #e74c3c;
@@ -21,6 +23,12 @@
             --bg-color: #f0f2f5;
             --card-bg: #ffffff;
             --accent: #2c3e50;
+            
+            /* Sushiro specific */
+            --sushiro-red: #e74c3c;
+            --sushiro-silver: #bdc3c7;
+            --sushiro-gold: #d4af37;
+            --sushiro-black: #2c3e50;
         }
 
         body {
@@ -37,24 +45,52 @@
         .container {
             background-color: var(--card-bg);
             padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
             width: 100%;
             max-width: 500px;
         }
 
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 10px;
+        }
+
         h1 {
-            text-align: center;
+            margin: 0;
+            font-size: 1.4rem;
             color: #333;
-            margin: 0 0 1.5rem 0;
-            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        select#restaurantSelect {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 2px solid #f0f0f0;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #fff;
+            color: var(--accent);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        select#restaurantSelect:hover {
+            border-color: #e0e0e0;
+            background-color: #f9f9f9;
         }
 
         .budget-section {
             margin-bottom: 1.5rem;
-            padding: 10px;
+            padding: 12px;
             background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -71,27 +107,28 @@
             flex: 1;
             padding: 8px;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 1rem;
             text-align: right;
+            outline-color: var(--accent);
         }
 
         .plate-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .plate-card {
             background: #fff;
-            border-radius: 10px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #f0f0f0;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
         }
 
         .plate-info {
@@ -99,11 +136,12 @@
             justify-content: space-between;
             align-items: center;
             font-weight: bold;
+            font-size: 0.95rem;
         }
 
         .plate-color-dot {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             border: 1px solid rgba(0,0,0,0.1);
         }
@@ -112,14 +150,14 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #f1f1f1;
-            border-radius: 20px;
-            padding: 2px;
+            background: #f5f5f5;
+            border-radius: 25px;
+            padding: 3px;
         }
 
         .ctrl-btn {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             border: none;
             cursor: pointer;
@@ -128,48 +166,118 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
+            transition: all 0.1s;
         }
 
-        .btn-minus { background: #fff; color: #e74c3c; }
+        .btn-minus { background: #fff; color: #e74c3c; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .btn-plus { background: var(--accent); color: #fff; }
-        .ctrl-btn:hover { opacity: 0.8; }
-        .ctrl-btn:active { transform: scale(0.95); }
+        .ctrl-btn:active { transform: scale(0.9); }
 
         .count-display {
             font-weight: bold;
             font-size: 1.1rem;
-            min-width: 30px;
+            min-width: 35px;
             text-align: center;
         }
 
-        .summary {
-            background-color: #f8f9fa;
+        .custom-section {
+            margin-top: 1rem;
             padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #dee2e6;
-            transition: all 0.3s;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .custom-section h3 {
+            margin: 0 0 12px 0;
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .custom-input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .custom-input-group input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline-color: var(--accent);
+        }
+
+        .input-name { flex: 2; }
+        .input-price { flex: 1; }
+
+        .btn-add-custom {
+            padding: 0 15px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .custom-items-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .custom-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .btn-remove-custom {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .summary {
+            margin-top: 1.5rem;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #eee;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .summary.near-budget {
             background-color: #fffaf0;
             border-color: #fbd38d;
+            transform: translateY(-2px);
         }
 
         .summary.over-budget {
             background-color: #fff5f5;
             border-color: #feb2b2;
-            box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
-        }
-
-        .summary.over-budget .total {
-            color: #e74c3c;
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.05);
+            transform: translateY(-2px);
         }
 
         .progress-container {
-            height: 10px;
+            height: 8px;
             background: #e2e8f0;
-            border-radius: 5px;
+            border-radius: 4px;
             margin: 15px 0;
             overflow: hidden;
             display: none;
@@ -179,65 +287,66 @@
             height: 100%;
             width: 0%;
             background: var(--green);
-            transition: width 0.3s, background-color 0.3s;
+            transition: width 0.4s ease-out, background-color 0.3s;
         }
 
         .row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            color: #555;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 0.95rem;
         }
 
         .row.remaining {
             font-size: 0.85rem;
-            font-style: italic;
+            font-weight: bold;
+            color: var(--green);
             display: none;
+            background: rgba(46, 204, 113, 0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
         }
+
+        .near-budget .row.remaining { color: #dd6b20; background: rgba(221, 107, 32, 0.1); }
+        .over-budget .row.remaining { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
 
         .row.total {
             border-top: 2px solid #333;
-            margin-top: 10px;
-            padding-top: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             color: #000;
         }
 
         .status-msg {
             text-align: center;
             font-size: 0.85rem;
-            margin-top: 5px;
+            margin-top: 10px;
             font-weight: bold;
             display: none;
         }
 
-        .near-budget .status-msg.warning-near {
-            display: block;
-            color: #dd6b20;
-        }
-
-        .over-budget .status-msg.warning-over {
-            display: block;
-            color: #e74c3c;
-        }
+        .near-budget .status-msg.warning-near { display: block; color: #dd6b20; }
+        .over-budget .status-msg.warning-over { display: block; color: #e74c3c; }
 
         .btn-reset {
             width: 100%;
             margin-top: 1.5rem;
-            padding: 12px;
+            padding: 14px;
             border: none;
-            background-color: #e0e0e0;
-            border-radius: 8px;
+            background-color: #f0f0f0;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: bold;
-            color: #666;
-            transition: background 0.2s;
+            color: #888;
+            transition: all 0.2s;
         }
 
-        .btn-reset:hover { background: #d0d0d0; }
+        .btn-reset:hover { background: #e8e8e8; color: #666; }
 
-        /* Specific Plate Colors */
+        /* Katsu Midori Plate Colors */
         .dot-red { background-color: var(--red); }
         .dot-blue { background-color: var(--blue); }
         .dot-green { background-color: var(--green); }
@@ -250,21 +359,41 @@
         .dot-solid-gold { background-color: var(--solid-gold); }
         .dot-blue-check { background-image: repeating-conic-gradient(#2980b9 0% 25%, #3498db 0% 50%) 50% / 10px 10px; }
         .dot-black-gold { background-color: var(--black-gold); border: 2px solid var(--solid-gold); }
+
+        /* Sushiro Plate Colors */
+        .dot-s-red { background-color: var(--sushiro-red); }
+        .dot-s-silver { background-color: var(--sushiro-silver); }
+        .dot-s-gold { background-color: var(--sushiro-gold); }
+        .dot-s-black { background-color: var(--sushiro-black); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🍣 Katsu Midori Calc</h1>
+    <div class="header">
+        <h1>🍣 
+            <select id="restaurantSelect" onchange="initApp()">
+                <option value="katsu">Katsu Midori</option>
+                <option value="sushiro">Sushiro</option>
+            </select>
+        </h1>
+    </div>
 
     <div class="budget-section">
         <label for="targetPrice">Budget (฿):</label>
         <input type="number" id="targetPrice" placeholder="e.g. 1000" oninput="updateUI()" min="0" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
     </div>
     
-    <div class="plate-grid">
-        <!-- Generated by JS for cleaner code, but defining one for structure -->
-        <div id="plates-container" style="display: contents;"></div>
+    <div id="plates-container" class="plate-grid"></div>
+
+    <div class="custom-section">
+        <h3>➕ Special Menu <small style="font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8;">(other than the normal dish price)</small></h3>
+        <div class="custom-input-group">
+            <input type="text" id="customName" class="input-name" placeholder="Item name">
+            <input type="number" id="customPrice" class="input-price" placeholder="Price" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+            <button class="btn-add-custom" onclick="addCustomItem()">Add</button>
+        </div>
+        <div id="customItemsList" class="custom-items-list"></div>
     </div>
 
     <div class="summary" id="summaryBox">
@@ -286,7 +415,7 @@
         </div>
 
         <div class="row remaining" id="remRow">
-            <span>Remaining:</span>
+            <span id="remLabel">Remaining:</span>
             <span>฿<span id="remaining">0.00</span></span>
         </div>
 
@@ -302,66 +431,132 @@
 </div>
 
 <script>
-    const plateData = [
-        { id: 'red', price: 40, label: 'Red' },
-        { id: 'blue', price: 50, label: 'Blue' },
-        { id: 'green', price: 60, label: 'Green' },
-        { id: 'yellow', price: 70, label: 'Yellow' },
-        { id: 'brown', price: 80, label: 'Brown' },
-        { id: 'pink', price: 90, label: 'Pink' },
-        { id: 'grey', price: 100, label: 'Grey' },
-        { id: 'white-gold', price: 120, label: 'White-Gold' },
-        { id: 'red-gold', price: 140, label: 'Red-Gold' },
-        { id: 'solid-gold', price: 150, label: 'Solid Gold' },
-        { id: 'blue-check', price: 160, label: 'Blue Check' },
-        { id: 'black-gold', price: 180, label: 'Black-Gold' }
-    ];
+    const restaurants = {
+        katsu: [
+            { id: 'red', price: 40, label: 'Red' },
+            { id: 'blue', price: 50, label: 'Blue' },
+            { id: 'green', price: 60, label: 'Green' },
+            { id: 'yellow', price: 70, label: 'Yellow' },
+            { id: 'brown', price: 80, label: 'Brown' },
+            { id: 'pink', price: 90, label: 'Pink' },
+            { id: 'grey', price: 100, label: 'Grey' },
+            { id: 'white-gold', price: 120, label: 'White-Gold' },
+            { id: 'red-gold', price: 140, label: 'Red-Gold' },
+            { id: 'solid-gold', price: 150, label: 'Solid Gold' },
+            { id: 'blue-check', price: 160, label: 'Blue Check' },
+            { id: 'black-gold', price: 180, label: 'Black-Gold' }
+        ],
+        sushiro: [
+            { id: 's-red', price: 40, label: 'Red' },
+            { id: 's-silver', price: 60, label: 'Silver' },
+            { id: 's-gold', price: 80, label: 'Gold' },
+            { id: 's-black', price: 120, label: 'Black' }
+        ]
+    };
 
-    const counts = {};
-    let subtotal = 0;
+    let currentCounts = {};
+    let plateSubtotal = 0;
+    let customItems = [];
 
-    // Initialize counts and render grid
-    const container = document.getElementById('plates-container');
-    plateData.forEach(plate => {
-        counts[plate.id] = 0;
+    function initApp() {
+        const type = document.getElementById('restaurantSelect').value;
+        const plateData = restaurants[type];
+        const container = document.getElementById('plates-container');
         
-        const card = document.createElement('div');
-        card.className = 'plate-card';
-        card.innerHTML = `
-            <div class="plate-info">
-                <div class="plate-color-dot dot-${plate.id}"></div>
-                <span>฿${plate.price}</span>
-            </div>
-            <div class="controls-row">
-                <button class="ctrl-btn btn-minus" onclick="changeCount('${plate.id}', -1, ${plate.price})">−</button>
-                <div class="count-display" id="count-${plate.id}">0</div>
-                <button class="ctrl-btn btn-plus" onclick="changeCount('${plate.id}', 1, ${plate.price})">+</button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
+        // Reset state
+        container.innerHTML = '';
+        currentCounts = {};
+        plateSubtotal = 0;
+        customItems = [];
+        document.getElementById('customItemsList').innerHTML = '';
+        
+        // Render plates
+        plateData.forEach(plate => {
+            currentCounts[plate.id] = 0;
+            
+            const card = document.createElement('div');
+            card.className = 'plate-card';
+            card.innerHTML = `
+                <div class="plate-info">
+                    <div class="plate-color-dot dot-${plate.id}"></div>
+                    <span>฿${plate.price}</span>
+                </div>
+                <div class="controls-row">
+                    <button class="ctrl-btn btn-minus" onclick="changeCount('${plate.id}', -1, ${plate.price})">−</button>
+                    <div class="count-display" id="count-${plate.id}">0</div>
+                    <button class="ctrl-btn btn-plus" onclick="changeCount('${plate.id}', 1, ${plate.price})">+</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+        
+        updateUI();
+    }
 
     function changeCount(id, delta, price) {
-        const newCount = counts[id] + delta;
+        const newCount = currentCounts[id] + delta;
         if (newCount < 0) return;
         
-        counts[id] = newCount;
-        subtotal += (delta * price);
+        currentCounts[id] = newCount;
+        plateSubtotal += (delta * price);
         
         document.getElementById(`count-${id}`).innerText = newCount;
         updateUI();
     }
 
-    function reset() {
-        subtotal = 0;
-        plateData.forEach(plate => {
-            counts[plate.id] = 0;
-            document.getElementById(`count-${plate.id}`).innerText = '0';
+    function addCustomItem() {
+        const nameInput = document.getElementById('customName');
+        const priceInput = document.getElementById('customPrice');
+        const name = nameInput.value.trim() || 'Extra Item';
+        const price = parseFloat(priceInput.value) || 0;
+
+        if (price > 0) {
+            const item = { id: Date.now(), name, price };
+            customItems.push(item);
+            
+            nameInput.value = '';
+            priceInput.value = '';
+            renderCustomList();
+            updateUI();
+        }
+    }
+
+    function removeCustomItem(id) {
+        customItems = customItems.filter(item => item.id !== id);
+        renderCustomList();
+        updateUI();
+    }
+
+    function renderCustomList() {
+        const list = document.getElementById('customItemsList');
+        list.innerHTML = '';
+        customItems.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'custom-item';
+            div.innerHTML = `
+                <span>${item.name} (฿${item.price})</span>
+                <button class="btn-remove-custom" onclick="removeCustomItem(${item.id})">×</button>
+            `;
+            list.appendChild(div);
         });
+    }
+
+    function reset() {
+        plateSubtotal = 0;
+        customItems = [];
+        for (let id in currentCounts) {
+            currentCounts[id] = 0;
+            const el = document.getElementById(`count-${id}`);
+            if (el) el.innerText = '0';
+        }
+        renderCustomList();
         updateUI();
     }
 
     function updateUI() {
+        const customSubtotal = customItems.reduce((sum, item) => sum + item.price, 0);
+        const subtotal = plateSubtotal + customSubtotal;
+        
         const service = subtotal * 0.10;
         const vat = (subtotal + service) * 0.07;
         const total = subtotal + service + vat;
@@ -377,6 +572,7 @@
         const progBar = document.getElementById('progBar');
         const remRow = document.getElementById('remRow');
         const remVal = document.getElementById('remaining');
+        const remLabel = document.getElementById('remLabel');
 
         if (target > 0) {
             progContainer.style.display = 'block';
@@ -385,18 +581,22 @@
             const percent = Math.min((total / target) * 100, 100);
             progBar.style.width = percent + '%';
             
-            const remaining = target - total;
-            remVal.innerText = remaining.toLocaleString('en-US', {minimumFractionDigits: 2});
+            const diff = target - total;
+            remVal.innerText = Math.abs(diff).toLocaleString('en-US', {minimumFractionDigits: 2});
 
             summaryBox.classList.remove('near-budget', 'over-budget');
             if (total > target) {
                 summaryBox.classList.add('over-budget');
                 progBar.style.backgroundColor = '#e74c3c';
-            } else if (total > target * 0.8) {
-                summaryBox.classList.add('near-budget');
-                progBar.style.backgroundColor = '#f1c40f';
+                remLabel.innerText = 'Over:';
             } else {
-                progBar.style.backgroundColor = '#2ecc71';
+                remLabel.innerText = 'Remaining:';
+                if (total > target * 0.8) {
+                    summaryBox.classList.add('near-budget');
+                    progBar.style.backgroundColor = '#f1c40f';
+                } else {
+                    progBar.style.backgroundColor = '#2ecc71';
+                }
             }
         } else {
             progContainer.style.display = 'none';
@@ -404,6 +604,8 @@
             summaryBox.classList.remove('near-budget', 'over-budget');
         }
     }
+
+    window.onload = initApp;
 </script>
 
 </body>
