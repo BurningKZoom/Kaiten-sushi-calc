@@ -496,9 +496,9 @@
             <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 0.9rem;">Welcome, <span id="displayName" style="color: var(--accent);"></span>!</p>
             <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
                 <button onclick="hostRoom()" style="width: 100%; max-width: 200px; padding: 10px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Host New Table</button>
-                <div style="display: flex; gap: 5px; width: 100%; max-width: 200px;">
-                    <input type="text" id="joinRoomInput" placeholder="Table Code" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ddd; text-align: center; text-transform: uppercase;">
-                    <button onclick="joinRoomFromInput()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Join</button>
+                <div style="display: flex; gap: 8px; width: 100%; max-width: 240px; box-sizing: border-box;">
+                    <input type="text" id="joinRoomInput" placeholder="Code" style="flex: 1; min-width: 0; padding: 10px; border-radius: 10px; border: 1px solid #ddd; text-align: center; text-transform: uppercase; font-size: 0.9rem;">
+                    <button onclick="joinRoomFromInput()" style="padding: 10px 20px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; white-space: nowrap;">Join</button>
                 </div>
                 <button onclick="resetLobby()" style="background:none; border:none; color:#aaa; font-size:0.75rem; cursor:pointer; text-decoration:underline;">Change Name</button>
             </div>
