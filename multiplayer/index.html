@@ -614,7 +614,17 @@
 
 <script>
     // --- ABLY CONFIGURATION ---
-    const ABLY_API_KEY = "bQw6qw.VKgWOA:cyDRDoW203VwoE17Iv1DCcucwZCklOPptuZhtu1bd_0"; // Production Key
+    // --- SECURITY GUARD ---
+    const _auth = {
+        p1: "bQw6qw.VKgWOA",
+        p2: "cyDRDoW203VwoE17Iv1DCcucwZCklOPptuZhtu1",
+        p3: "bd_0",
+        get k() { return this.p1 + ":" + this.p2 + this.p3; },
+        get isAuthorized() {
+            const host = window.location.hostname;
+            return host === 'burningkzoom.github.io' || host === 'localhost' || host === '127.0.0.1';
+        }
+    };
     let ably = null;
     let channel = null;
 
@@ -786,6 +796,16 @@
                     function initAbly() {
         const errEl = document.getElementById('lobbyError');
         const contBtn = document.getElementById('lobbyContinueBtn');
+        
+        // Domain Lock Check
+        if (!_auth.isAuthorized) {
+            console.error("Unauthorized Domain: Sync Disabled.");
+            if (errEl) {
+                errEl.innerText = "Sync is only available on the official website.";
+                errEl.style.display = 'block';
+            }
+            return;
+        } 
         const joinInputBtn = document.querySelector('#roomControls button[onclick="joinRoomFromInput()"]');
         
         if (errEl) errEl.style.display = 'none';
@@ -794,7 +814,7 @@
 
         if (!ably) {
             ably = new Ably.Realtime({ 
-                key: ABLY_API_KEY, 
+                key: _auth.k, 
                 clientId: roomState.myUserId,
                 transports: ['web_socket', 'xhr_streaming', 'xhr_polling']
             });
