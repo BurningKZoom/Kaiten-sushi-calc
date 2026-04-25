@@ -479,6 +479,7 @@
 
         <!-- ABLY LOBBY SECTION -->
     <div id="lobbySection" style="margin-bottom: 1.5rem; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; text-align: center;">
+        <div id="lobbyError" style="display: none; color: #e74c3c; font-size: 0.75rem; margin-bottom: 15px; font-weight: bold; padding: 10px; background: #fdeaea; border-radius: 8px; border: 1px solid #fadbd8;"></div>
         <div id="startMultiplayerSection">
             <button onclick="showNameInput()" style="padding: 10px 20px; background: var(--blue); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">🌐 Sync with Friends</button>
         </div>
@@ -490,7 +491,7 @@
                 <button onclick="saveName()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Continue</button>
                 <button onclick="resetLobby()" style="padding: 8px 15px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Cancel</button>
             
-            <div id="lobbyError" style="display: none; color: #e74c3c; font-size: 0.75rem; margin-top: 5px; font-weight: bold;"></div>
+            
             </div>
         </div>
 
@@ -782,7 +783,7 @@
         }
     }
 
-                function initAbly() {
+                    function initAbly() {
         const errEl = document.getElementById('lobbyError');
         const contBtn = document.getElementById('lobbyContinueBtn');
         const joinInputBtn = document.querySelector('#roomControls button[onclick="joinRoomFromInput()"]');
@@ -792,7 +793,6 @@
         if (joinInputBtn) joinInputBtn.innerText = '...';
 
         if (!ably) {
-            // Use transport order that works better with Brave/Privacy blockers
             ably = new Ably.Realtime({ 
                 key: ABLY_API_KEY, 
                 clientId: roomState.myUserId,
@@ -802,15 +802,14 @@
         
         const tempChannel = ably.channels.get('test:' + roomState.roomId);
 
-        // Set a timeout to prevent "nothing happens" state
         const connectionTimeout = setTimeout(() => {
-            if (contBtn && contBtn.innerText === 'Connecting...') {
-                contBtn.innerText = 'Continue';
+            if (contBtn && (contBtn.innerText === 'Connecting...' || contBtn.innerText === '...')) {
+                if (contBtn) contBtn.innerText = 'Continue';
                 if (joinInputBtn) joinInputBtn.innerText = 'Join';
-                errEl.innerText = "Connection taking too long. Try refreshing or disabling Brave Shields.";
+                errEl.innerText = "Connection slow. Try refreshing or check Brave Shields.";
                 errEl.style.display = 'block';
             }
-        }, 5000);
+        }, 8000);
 
         tempChannel.presence.get((err, members) => {
             clearTimeout(connectionTimeout);
@@ -818,7 +817,6 @@
             if (joinInputBtn) joinInputBtn.innerText = 'Join';
 
             if (err) {
-                console.error("Presence error:", err);
                 errEl.innerText = "Error connecting to table. Please try again.";
                 errEl.style.display = 'block';
                 return;
@@ -832,15 +830,16 @@
                 errEl.innerText = `Name "${roomState.myName}" is already taken at this table!`;
                 errEl.style.display = 'block';
                 
-                document.getElementById('nameInputSection').style.display = 'block';
-                document.getElementById('roomControls').style.display = 'none';
-                document.getElementById('activeRoomSection').style.display = 'none';
-
+                // CRITICAL: Clear name and room so user is forced back to Name Input
+                roomState.myName = '';
                 roomState.roomId = null;
+                localStorage.removeItem('sushi_userName');
                 localStorage.removeItem('sushi_roomId');
+                
                 const url = new URL(window.location);
                 url.searchParams.delete('table');
                 window.history.pushState({}, '', url);
+                
                 updateLobbyUI();
                 return;
             }
