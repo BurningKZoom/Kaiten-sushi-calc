@@ -431,6 +431,36 @@
         .dot-s-silver { background-color: var(--sushiro-silver); }
         .dot-s-gold { background-color: var(--sushiro-gold); }
         .dot-s-black { background-color: var(--sushiro-black); }
+    
+        /* QR Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            max-width: 300px;
+            width: 100%;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #aaa;
+        }
+
     </style>
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -476,9 +506,13 @@
 
         <div id="activeRoomSection" style="display: none;">
             <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 0.9rem; color: var(--accent);">Table ID: <span id="roomIdDisplay"></span></p>
-            <div id="qrcode" style="display: flex; justify-content: center; margin: 10px 0;"></div>
-            <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #666;">At table: <span id="usersList"></span></p>
-            <button onclick="leaveRoom()" style="margin-top: 15px; padding: 8px 20px; background: #e74c3c; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">Leave Table</button>
+            <div style="display: flex; gap: 8px; justify-content: center; margin: 10px 0;">
+                <button onclick="showQRCode()" style="padding: 8px 15px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 1rem;">📱</span> Show QR
+                </button>
+                <button onclick="leaveRoom()" style="padding: 8px 15px; background: #fff; color: #e74c3c; border: 1px solid #e74c3c; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">Leave</button>
+            </div>
+            <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #888;">At table: <span id="usersList"></span></p>
         </div>
     </div>
 
@@ -625,6 +659,23 @@
     };
 
     // --- LOBBY & SYNC FUNCTIONS ---
+    
+    function showQRCode() {
+        if (!roomState.roomId) return;
+        document.getElementById('modalRoomId').innerText = roomState.roomId;
+        document.getElementById('qrModal').style.display = 'flex';
+        document.getElementById('qrcode-modal').innerHTML = '';
+        new QRCode(document.getElementById("qrcode-modal"), {
+            text: window.location.origin + window.location.pathname + "?table=" + roomState.roomId,
+            width: 180,
+            height: 180
+        });
+    }
+
+    function closeQRCode() {
+        document.getElementById('qrModal').style.display = 'none';
+    }
+
     function showNameInput() {
         document.getElementById('startMultiplayerSection').style.display = 'none';
         document.getElementById('nameInputSection').style.display = 'block';
@@ -656,6 +707,7 @@
     function hostRoom() {
         const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
         joinRoom(newRoomId);
+        setTimeout(showQRCode, 300);
     }
 
     function joinRoom(roomId) {
@@ -713,12 +765,6 @@
         if (roomState.roomId) {
             activeSection.style.display = 'block';
             document.getElementById('roomIdDisplay').innerText = roomState.roomId;
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById("qrcode"), {
-                text: window.location.href,
-                width: 128,
-                height: 128
-            });
             document.getElementById('tableBillSection').style.display = 'block';
         } else if (roomState.myName) {
             controlsSection.style.display = 'block';
@@ -932,10 +978,29 @@
         let totalViewPrice = 0;
         const plateData = restaurants[type];
 
+        // Include plates in total
         plateData.forEach(plate => {
             const count = combinedCounts[plate.id] || 0;
             totalViewPrice += (count * plate.price);
         });
+
+        // Include custom items in total
+        if (currentTowerView === 'personal') {
+            state.data[type].customItems.forEach(item => {
+                totalViewPrice += (item.price * item.qty);
+            });
+        } else if (roomState.roomId) {
+            state.data[type].customItems.forEach(item => {
+                totalViewPrice += (item.price * item.qty);
+            });
+            for (const peer of Object.values(roomState.peers)) {
+                if (peer.restaurant === type && peer.customItems) {
+                    peer.customItems.forEach(item => {
+                        totalViewPrice += (item.price * item.qty);
+                    });
+                }
+            }
+        }
 
         plateData.forEach(plate => {
             const count = combinedCounts[plate.id] || 0;
