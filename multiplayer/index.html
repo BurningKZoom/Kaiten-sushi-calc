@@ -473,12 +473,14 @@
     
     <div id="plates-container" class="plate-grid"></div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; margin-bottom: 5px; padding: 0 10px;">
-        <h3 style="margin: 0; font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em;">🍣 Plate Tower</h3>
-        <div style="display: flex; gap: 5px;">
-            <button id="towerViewBtn" onclick="toggleTowerView()" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #ddd; background: var(--accent); color: white; font-size: 0.75rem; cursor: pointer; font-weight: bold;">View: Personal</button>
-            
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; margin-bottom: 8px; padding: 0 5px; width: 100%; box-sizing: border-box;">
+        <h3 style="margin: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;">🍣 Plate Tower</h3>
+        <div id="towerToggleContainer" style="display: none; background: #eee; border-radius: 20px; padding: 2px; display: flex; gap: 2px;">
+            <button id="viewPersonalBtn" onclick="setTowerView('personal')" style="padding: 4px 10px; border-radius: 18px; border: none; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">Personal</button>
+            <button id="viewTableBtn" onclick="setTowerView('table')" style="padding: 4px 10px; border-radius: 18px; border: none; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">Table</button>
         </div>
+    </div>
+    </div>
     </div>
     <div id="towerContainer" style="display: flex; background: #fff; border-radius: 12px; border: 1px solid #eee; min-height: 120px; padding: 15px; gap: 15px; overflow-x: auto; align-items: flex-end;">
         <div id="plateTower" style="flex: 1; display: flex; justify-content: center; align-items: flex-end; gap: 15px;"></div>
@@ -573,209 +575,6 @@
     localStorage.setItem('sushi_userId', roomState.myUserId);
     let currentTowerView = 'personal';
 
-        function showNameInput() {
-        document.getElementById('startMultiplayerSection').style.display = 'none';
-        document.getElementById('nameInputSection').style.display = 'block';
-    }
-
-    function resetLobby() {
-        roomState.myName = '';
-        localStorage.removeItem('sushi_userName');
-        updateLobbyUI();
-    }
-
-    function saveName() {
-        const name = document.getElementById('userNameInput').value.trim();
-        if (name) {
-            roomState.myName = name;
-            localStorage.setItem('sushi_userName', name);
-            updateLobbyUI();
-        updateTowerToggleUI();
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const tableParam = urlParams.get('table');
-            if (tableParam && !roomState.roomId) {
-                joinRoom(tableParam);
-            }
-        }
-    }
-
-    function hostRoom() {
-        const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-        joinRoom(newRoomId);
-    }
-
-    function joinRoom(roomId) {
-        roomState.roomId = roomId;
-        localStorage.setItem('sushi_roomId', roomId);
-        
-        const url = new URL(window.location);
-        url.searchParams.set('table', roomId);
-        window.history.pushState({}, '', url);
-
-        updateLobbyUI();
-        initAbly();
-    }
-
-    function leaveRoom() {
-        if (channel) {
-            channel.presence.leave();
-            channel.detach();
-        }
-        roomState.roomId = null;
-        roomState.peers = {};
-        roomState.myName = '';
-        localStorage.removeItem('sushi_roomId');
-        localStorage.removeItem('sushi_userName');
-        
-        const url = new URL(window.location);
-        url.searchParams.delete('table');
-        window.history.pushState({}, '', url);
-        
-        updateLobbyUI();
-        updateTowerToggleUI();
-        updateUI();
-        renderTower();
-    }
-        roomState.roomId = null;
-        roomState.peers = {};
-        localStorage.removeItem('sushi_roomId');
-        
-        const url = new URL(window.location);
-        url.searchParams.delete('table');
-        window.history.pushState({}, '', url);
-        
-        updateLobbyUI();
-        updateUI();
-        renderTower();
-    }
-
-        function updateLobbyUI() {
-        const startSection = document.getElementById('startMultiplayerSection');
-        const nameSection = document.getElementById('nameInputSection');
-        const controlsSection = document.getElementById('roomControls');
-        const activeSection = document.getElementById('activeRoomSection');
-
-        // Reset visibility
-        startSection.style.display = 'none';
-        nameSection.style.display = 'none';
-        controlsSection.style.display = 'none';
-        activeSection.style.display = 'none';
-
-        if (roomState.roomId) {
-            activeSection.style.display = 'block';
-            document.getElementById('roomIdDisplay').innerText = roomState.roomId;
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById("qrcode"), {
-                text: window.location.href,
-                width: 128,
-                height: 128
-            });
-            document.getElementById('tableBillSection').style.display = 'block';
-        } else if (roomState.myName) {
-            controlsSection.style.display = 'block';
-            document.getElementById('displayName').innerText = roomState.myName;
-            document.getElementById('tableBillSection').style.display = 'none';
-        } else if (document.getElementById('userNameInput').parentElement.style.display === 'block') {
-            // This is a bit of a hack to handle the "intermediate" name input state
-            nameSection.style.display = 'block';
-        } else {
-            startSection.style.display = 'block';
-            document.getElementById('tableBillSection').style.display = 'none';
-        }
-    } else if (!roomState.roomId) {
-            nameSection.style.display = 'none';
-            controlsSection.style.display = 'block';
-            activeSection.style.display = 'none';
-            document.getElementById('displayName').innerText = roomState.myName;
-        } else {
-            nameSection.style.display = 'none';
-            controlsSection.style.display = 'none';
-            activeSection.style.display = 'block';
-            document.getElementById('roomIdDisplay').innerText = roomState.roomId;
-            
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById("qrcode"), {
-                text: window.location.href,
-                width: 128,
-                height: 128
-            });
-
-            document.getElementById('tableBillSection').style.display = 'block';
-        }
-    }
-
-    function initAbly() {
-        if (!ably) {
-            ably = new Ably.Realtime({ key: ABLY_API_KEY, clientId: roomState.myUserId });
-        }
-        
-        channel = ably.channels.get('test:' + roomState.roomId);
-
-        channel.subscribe('syncState', (message) => {
-            if (message.clientId !== roomState.myUserId) {
-                roomState.peers[message.clientId] = message.data;
-                updateUsersList();
-                updateUI();
-                if (currentTowerView === 'table') renderTower();
-            }
-        });
-
-        channel.presence.subscribe('enter', (member) => {
-            if (member.clientId !== roomState.myUserId) publishMyState();
-        });
-        channel.presence.subscribe('leave', (member) => {
-            delete roomState.peers[member.clientId];
-            updateUsersList();
-            updateUI();
-            if (currentTowerView === 'table') renderTower();
-        });
-
-        channel.presence.enter({ name: roomState.myName });
-
-        channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
-            if (!err && resultPage.items.length > 0) {
-                resultPage.items.forEach(msg => {
-                    if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
-                        roomState.peers[msg.clientId] = msg.data;
-                    }
-                });
-                updateUsersList();
-                updateUI();
-                if (currentTowerView === 'table') renderTower();
-            }
-        });
-        
-        publishMyState();
-    }
-
-    function updateUsersList() {
-        let names = [roomState.myName + " (You)"];
-        for (const [id, data] of Object.entries(roomState.peers)) {
-            if (data.name) names.push(data.name);
-        }
-        document.getElementById('usersList').innerText = names.join(', ');
-    }
-
-    function publishMyState() {
-        if (!channel || !roomState.roomId) return;
-        const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        
-        channel.publish('syncState', {
-            name: roomState.myName,
-            restaurant: type,
-            counts: currentData.counts,
-            customItems: currentData.customItems
-        });
-    }
-
-    function toggleTowerView() {
-        currentTowerView = currentTowerView === 'personal' ? 'table' : 'personal';
-        document.getElementById('towerViewBtn').innerText = currentTowerView === 'personal' ? 'View: Personal' : 'View: Table';
-        renderTower();
-    }
-
     const restaurants = {
         katsu: [
             { id: 'red', price: 40, label: 'Red' },
@@ -811,6 +610,205 @@
         }
     };
 
+    // --- LOBBY & SYNC FUNCTIONS ---
+    function showNameInput() {
+        document.getElementById('startMultiplayerSection').style.display = 'none';
+        document.getElementById('nameInputSection').style.display = 'block';
+    }
+
+    function resetLobby() {
+        roomState.myName = '';
+        localStorage.removeItem('sushi_userName');
+        updateLobbyUI();
+        updateTowerToggleUI();
+    }
+
+    function saveName() {
+        const name = document.getElementById('userNameInput').value.trim();
+        if (name) {
+            roomState.myName = name;
+            localStorage.setItem('sushi_userName', name);
+            updateLobbyUI();
+            updateTowerToggleUI();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const tableParam = urlParams.get('table');
+            if (tableParam && !roomState.roomId) {
+                joinRoom(tableParam);
+            }
+        }
+    }
+
+    function hostRoom() {
+        const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+        joinRoom(newRoomId);
+    }
+
+    function joinRoom(roomId) {
+        roomState.roomId = roomId;
+        localStorage.setItem('sushi_roomId', roomId);
+        
+        const url = new URL(window.location);
+        url.searchParams.set('table', roomId);
+        window.history.pushState({}, '', url);
+
+        updateLobbyUI();
+        updateTowerToggleUI();
+        initAbly();
+    }
+
+    function joinRoomFromInput() {
+        const code = document.getElementById('joinRoomInput').value.trim().toUpperCase();
+        if (code) {
+            joinRoom(code);
+        }
+    }
+
+    function leaveRoom() {
+        if (channel) {
+            channel.presence.leave();
+            channel.detach();
+        }
+        roomState.roomId = null;
+        roomState.peers = {};
+        roomState.myName = '';
+        localStorage.removeItem('sushi_roomId');
+        localStorage.removeItem('sushi_userName');
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('table');
+        window.history.pushState({}, '', url);
+        
+        updateLobbyUI();
+        updateTowerToggleUI();
+        updateUI();
+        renderTower();
+    }
+
+    function updateLobbyUI() {
+        const startSection = document.getElementById('startMultiplayerSection');
+        const nameSection = document.getElementById('nameInputSection');
+        const controlsSection = document.getElementById('roomControls');
+        const activeSection = document.getElementById('activeRoomSection');
+
+        startSection.style.display = 'none';
+        nameSection.style.display = 'none';
+        controlsSection.style.display = 'none';
+        activeSection.style.display = 'none';
+
+        if (roomState.roomId) {
+            activeSection.style.display = 'block';
+            document.getElementById('roomIdDisplay').innerText = roomState.roomId;
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById("qrcode"), {
+                text: window.location.href,
+                width: 128,
+                height: 128
+            });
+            document.getElementById('tableBillSection').style.display = 'block';
+        } else if (roomState.myName) {
+            controlsSection.style.display = 'block';
+            document.getElementById('displayName').innerText = roomState.myName;
+            document.getElementById('tableBillSection').style.display = 'none';
+        } else {
+            startSection.style.display = 'block';
+            document.getElementById('tableBillSection').style.display = 'none';
+        }
+    }
+
+    function initAbly() {
+        if (!ably) {
+            ably = new Ably.Realtime({ key: ABLY_API_KEY, clientId: roomState.myUserId });
+        }
+        channel = ably.channels.get('test:' + roomState.roomId);
+
+        channel.subscribe('syncState', (message) => {
+            if (message.clientId !== roomState.myUserId) {
+                roomState.peers[message.clientId] = message.data;
+                updateUsersList();
+                updateUI();
+                renderTower();
+            }
+        });
+
+        channel.presence.subscribe('enter', (member) => {
+            if (member.clientId !== roomState.myUserId) publishMyState();
+        });
+        channel.presence.subscribe('leave', (member) => {
+            delete roomState.peers[member.clientId];
+            updateUsersList();
+            updateUI();
+            renderTower();
+        });
+
+        channel.presence.enter({ name: roomState.myName });
+
+        channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
+            if (!err && resultPage.items.length > 0) {
+                resultPage.items.forEach(msg => {
+                    if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
+                        roomState.peers[msg.clientId] = msg.data;
+                    }
+                });
+                updateUsersList();
+                updateUI();
+                renderTower();
+            }
+        });
+        publishMyState();
+    }
+
+    function updateUsersList() {
+        let names = [roomState.myName + " (You)"];
+        for (const [id, data] of Object.entries(roomState.peers)) {
+            if (data.name) names.push(data.name);
+        }
+        document.getElementById('usersList').innerText = names.join(', ');
+    }
+
+    function publishMyState() {
+        if (!channel || !roomState.roomId) return;
+        const type = document.getElementById('restaurantSelect').value;
+        const currentData = state.data[type];
+        channel.publish('syncState', {
+            name: roomState.myName,
+            restaurant: type,
+            counts: currentData.counts,
+            customItems: currentData.customItems
+        });
+    }
+
+    function setTowerView(view) {
+        currentTowerView = view;
+        updateTowerToggleUI();
+        renderTower();
+    }
+
+    function updateTowerToggleUI() {
+        const personalBtn = document.getElementById('viewPersonalBtn');
+        const tableBtn = document.getElementById('viewTableBtn');
+        const container = document.getElementById('towerToggleContainer');
+
+        if (!roomState.roomId) {
+            container.style.display = 'none';
+            return;
+        }
+        container.style.display = 'flex';
+
+        if (currentTowerView === 'personal') {
+            personalBtn.style.background = 'var(--accent)';
+            personalBtn.style.color = 'white';
+            tableBtn.style.background = 'transparent';
+            tableBtn.style.color = '#666';
+        } else {
+            tableBtn.style.background = 'var(--accent)';
+            tableBtn.style.color = 'white';
+            personalBtn.style.background = 'transparent';
+            personalBtn.style.color = '#666';
+        }
+    }
+
+    // --- CORE CALCULATOR FUNCTIONS ---
     function formatBudget(input) {
         let value = input.value.replace(/,/g, '');
         if (value === '' || isNaN(value)) {
@@ -835,25 +833,17 @@
     function loadData() {
         const saved = localStorage.getItem('sushi_calc_v2');
         if (!saved) return false;
-
         const loadedState = JSON.parse(saved);
-        const sixHours = 6 * 60 * 60 * 1000;
-        
-        if (Date.now() - loadedState.timestamp > sixHours) {
+        if (Date.now() - loadedState.timestamp > 6 * 60 * 60 * 1000) {
             localStorage.removeItem('sushi_calc_v2');
             return false;
         }
-
         state = loadedState;
         document.getElementById('restaurantSelect').value = state.lastActive;
         document.getElementById('targetPrice').value = state.targetPrice;
-        
-        
         initApp(true);
         return true;
     }
-
-    
 
     function switchRestaurant() {
         saveData();
@@ -864,19 +854,12 @@
         const type = document.getElementById('restaurantSelect').value;
         const plateData = restaurants[type];
         const container = document.getElementById('plates-container');
-        
         container.innerHTML = '';
-        if (!state.data[type]) {
-            state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
-        }
-
+        if (!state.data[type]) state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
         const currentData = state.data[type];
         
         plateData.forEach(plate => {
-            if (currentData.counts[plate.id] === undefined) {
-                currentData.counts[plate.id] = 0;
-            }
-            
+            if (currentData.counts[plate.id] === undefined) currentData.counts[plate.id] = 0;
             const card = document.createElement('div');
             card.className = 'plate-card';
             card.innerHTML = `
@@ -892,7 +875,6 @@
             `;
             container.appendChild(card);
         });
-        
         renderTower();
         renderCustomList();
         updateUI();
@@ -904,10 +886,8 @@
         const currentData = state.data[type];
         const newCount = (currentData.counts[id] || 0) + delta;
         if (newCount < 0) return;
-        
         currentData.counts[id] = newCount;
         currentData.plateSubtotal += (delta * price);
-        
         document.getElementById(`count-${id}`).innerText = newCount;
         renderTower();
         updateUI();
@@ -922,7 +902,6 @@
         summary.innerHTML = '';
         
         let combinedCounts = { ...state.data[type].counts };
-
         if (currentTowerView === 'table' && roomState.roomId) {
             for (const peer of Object.values(roomState.peers)) {
                 if (peer.restaurant === type && peer.counts) {
@@ -933,155 +912,100 @@
             }
         }
 
-        if (state.towerMode === 'combined') {
-            summary.style.display = 'flex';
-            let allPlates = [];
-            let totalCount = 0;
-            const plateData = restaurants[type];
+        summary.style.display = 'flex';
+        let allPlates = [];
+        let totalCount = 0;
+        let totalViewPrice = 0;
+        const plateData = restaurants[type];
 
-            plateData.forEach(plate => {
-                const count = combinedCounts[plate.id] || 0;
-                if (count > 0) {
-                    totalCount += count;
-                    for (let i = 0; i < count; i++) { allPlates.push(plate.id); }
-                    const item = document.createElement('div');
-                    item.style.display = 'flex';
-                    item.style.alignItems = 'center';
-                    item.style.gap = '8px';
-                    item.style.fontSize = '0.75rem';
-                    item.style.whiteSpace = 'nowrap';
-                    item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:12px !important; height:12px !important; border-width:1px !important; border-radius: 50% !important;"></div> <span style="min-width:15px"><b>${count}</b></span>`;
-                    summary.appendChild(item);
-                }
-            });
+        plateData.forEach(plate => {
+            const count = combinedCounts[plate.id] || 0;
+            totalViewPrice += (count * plate.price);
+        });
 
-            if (allPlates.length === 0) {
-                tower.innerHTML = '<span style="color:#ccc; font-style:italic; font-size:0.8rem;">Plate stack will appear here</span>';
-                summary.style.display = 'none';
-                return;
+        plateData.forEach(plate => {
+            const count = combinedCounts[plate.id] || 0;
+            if (count > 0) {
+                totalCount += count;
+                for (let i = 0; i < count; i++) { allPlates.push(plate.id); }
+                const percentage = totalViewPrice > 0 ? Math.round(((count * plate.price) / totalViewPrice) * 100) : 0;
+                const item = document.createElement('div');
+                item.style.display = 'flex';
+                item.style.alignItems = 'center';
+                item.style.gap = '8px';
+                item.style.fontSize = '0.75rem';
+                item.style.whiteSpace = 'nowrap';
+                item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:12px !important; height:12px !important; border-width:1px !important; border-radius: 50% !important;"></div> <span style="min-width:15px"><b>${count}</b></span> <span style="color:#aaa; font-size:0.6rem;">(${percentage}%)</span>`;
+                summary.appendChild(item);
             }
+        });
 
-            const stackContainer = document.createElement('div');
-            stackContainer.style.display = 'flex';
-            stackContainer.style.flexDirection = 'column';
-            stackContainer.style.alignItems = 'center';
-
-            const totalLabel = document.createElement('div');
-            totalLabel.style.fontSize = '0.75rem';
-            totalLabel.style.fontWeight = 'bold';
-            totalLabel.style.marginBottom = '8px';
-            totalLabel.style.color = 'var(--accent)';
-            totalLabel.innerText = `Total: ${totalCount}`;
-            stackContainer.appendChild(totalLabel);
-
-            const stack = document.createElement('div');
-            stack.className = 'stack';
-            allPlates.forEach(id => {
-                const plate = document.createElement('div');
-                plate.className = `visual-plate dot-${id}`;
-                stack.appendChild(plate);
-            });
-            stackContainer.appendChild(stack);
-            tower.appendChild(stackContainer);
-
-        } else {
+        if (allPlates.length === 0) {
+            tower.innerHTML = '<span style="color:#ccc; font-style:italic; font-size:0.8rem;">Plate stack will appear here</span>';
             summary.style.display = 'none';
-            const plateData = restaurants[type];
-            let stacksCreated = 0;
-
-            plateData.forEach(plate => {
-                const count = combinedCounts[plate.id] || 0;
-                if (count > 0) {
-                    const stackContainer = document.createElement('div');
-                    stackContainer.style.display = 'flex';
-                    stackContainer.style.flexDirection = 'column';
-                    stackContainer.style.alignItems = 'center';
-                    stackContainer.style.minWidth = '60px';
-
-                    const label = document.createElement('div');
-                    label.style.fontSize = '0.7rem';
-                    label.style.fontWeight = 'bold';
-                    label.style.marginBottom = '5px';
-                    label.style.color = '#888';
-                    label.innerText = `x${count}`;
-                    stackContainer.appendChild(label);
-
-                    const stack = document.createElement('div');
-                    stack.className = 'stack';
-                    for (let i = 0; i < count; i++) {
-                        const p = document.createElement('div');
-                        p.className = `visual-plate dot-${plate.id}`;
-                        stack.appendChild(p);
-                    }
-                    stackContainer.appendChild(stack);
-                    tower.appendChild(stackContainer);
-                    stacksCreated++;
-                }
-            });
-
-            if (stacksCreated === 0) {
-                tower.innerHTML = '<span style="color:#ccc; font-style:italic; font-size:0.8rem;">Plate stack will appear here</span>';
-            }
+            return;
         }
+
+        const stackContainer = document.createElement('div');
+        stackContainer.style.display = 'flex';
+        stackContainer.style.flexDirection = 'column';
+        stackContainer.style.alignItems = 'center';
+        const totalLabel = document.createElement('div');
+        totalLabel.style.fontSize = '0.75rem';
+        totalLabel.style.fontWeight = 'bold';
+        totalLabel.style.marginBottom = '8px';
+        totalLabel.style.color = 'var(--accent)';
+        totalLabel.innerText = `Total: ${totalCount}`;
+        stackContainer.appendChild(totalLabel);
+
+        const stack = document.createElement('div');
+        stack.className = 'stack';
+        allPlates.forEach(id => {
+            const plate = document.createElement('div');
+            plate.className = `visual-plate dot-${id}`;
+            stack.appendChild(plate);
+        });
+        stackContainer.appendChild(stack);
+        tower.appendChild(stackContainer);
     }
 
     function addCustomItem() {
         const type = document.getElementById('restaurantSelect').value;
         const currentData = state.data[type];
-        
         const nameInput = document.getElementById('customName');
         const priceInput = document.getElementById('customPrice');
         const qtyInput = document.getElementById('customQty');
-        
         const name = nameInput.value.trim() || 'Extra Item';
         const price = parseFloat(priceInput.value) || 0;
         const qty = parseInt(qtyInput.value) || 1;
-
         if (price > 0 && qty > 0) {
             currentData.customItems.push({ id: Date.now(), name, price, qty });
-            nameInput.value = '';
-            priceInput.value = '';
-            qtyInput.value = '1';
-            renderCustomList();
-            updateUI();
-            saveData();
+            nameInput.value = ''; priceInput.value = ''; qtyInput.value = '1';
+            renderCustomList(); updateUI(); saveData();
         }
     }
 
     function removeCustomItem(id) {
         const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        currentData.customItems = currentData.customItems.filter(item => item.id !== id);
-        renderCustomList();
-        updateUI();
-        saveData();
+        state.data[type].customItems = state.data[type].customItems.filter(item => item.id !== id);
+        renderCustomList(); updateUI(); saveData();
     }
 
     function changeCustomQty(id, delta) {
         const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        const item = currentData.customItems.find(i => i.id === id);
-        
+        const item = state.data[type].customItems.find(i => i.id === id);
         if (item) {
-            const newQty = item.qty + delta;
-            if (newQty <= 0) {
-                removeCustomItem(id);
-            } else {
-                item.qty = newQty;
-                renderCustomList();
-                updateUI();
-                saveData();
-            }
+            item.qty += delta;
+            if (item.qty <= 0) removeCustomItem(id);
+            else { renderCustomList(); updateUI(); saveData(); }
         }
     }
 
     function renderCustomList() {
         const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
         const list = document.getElementById('customItemsList');
-        
         list.innerHTML = '';
-        currentData.customItems.forEach(item => {
+        state.data[type].customItems.forEach(item => {
             const div = document.createElement('div');
             div.className = 'custom-item';
             div.style.alignItems = 'center';
@@ -1095,9 +1019,7 @@
                     <div class="count-display" style="font-size: 0.85rem; min-width: 20px;">${item.qty}</div>
                     <button class="ctrl-btn btn-plus" style="width: 24px; height: 24px; font-size: 0.9rem;" onclick="changeCustomQty(${item.id}, 1)">+</button>
                 </div>
-                <div style="font-weight: bold; font-size: 0.85rem; min-width: 60px; text-align: right; margin-right: 5px;">
-                    ฿${(item.price * item.qty).toLocaleString()}
-                </div>
+                <div style="font-weight: bold; font-size: 0.85rem; min-width: 60px; text-align: right; margin-right: 5px;">฿${(item.price * item.qty).toLocaleString()}</div>
                 <button class="btn-remove-custom" onclick="removeCustomItem(${item.id})">×</button>
             `;
             list.appendChild(div);
@@ -1108,15 +1030,12 @@
         if (!confirm('Clear all items for THIS restaurant?')) return;
         const type = document.getElementById('restaurantSelect').value;
         state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
-        initApp(true);
-        saveData();
+        initApp(true); saveData();
     }
 
     function updateUI() {
         const type = document.getElementById('restaurantSelect').value;
         const currentData = state.data[type];
-        
-        // 1. Personal Calculation
         const customSubtotal = currentData.customItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
         const subtotal = currentData.plateSubtotal + customSubtotal;
         const service = subtotal * 0.10;
@@ -1135,93 +1054,61 @@
         const remLabel = document.getElementById('remLabel');
 
         if (target > 0) {
-            progContainer.style.display = 'block';
-            remRow.style.display = 'flex';
+            progContainer.style.display = 'block'; remRow.style.display = 'flex';
             const percent = Math.min((total / target) * 100, 100);
             progBar.style.width = percent + '%';
             const diff = target - total;
             remVal.innerText = Math.abs(diff).toLocaleString('en-US', {minimumFractionDigits: 2});
-
             summaryBox.classList.remove('near-budget', 'over-budget');
             const affordSection = document.getElementById('affordabilitySection');
             const affordList = document.getElementById('affordabilityList');
 
             if (total > target) {
-                summaryBox.classList.add('over-budget');
-                progBar.style.backgroundColor = '#e74c3c';
-                remLabel.innerText = 'Over:';
-                affordSection.style.display = 'none';
+                summaryBox.classList.add('over-budget'); progBar.style.backgroundColor = '#e74c3c';
+                remLabel.innerText = 'Over:'; affordSection.style.display = 'none';
             } else {
                 remLabel.innerText = 'Remaining:';
-                if (total > target * 0.8) {
-                    summaryBox.classList.add('near-budget');
-                    progBar.style.backgroundColor = '#f1c40f';
-                } else {
-                    progBar.style.backgroundColor = '#2ecc71';
-                }
-
-                affordSection.style.display = 'block';
-                affordList.innerHTML = '';
+                if (total > target * 0.8) { summaryBox.classList.add('near-budget'); progBar.style.backgroundColor = '#f1c40f'; }
+                else { progBar.style.backgroundColor = '#2ecc71'; }
+                affordSection.style.display = 'block'; affordList.innerHTML = '';
                 const availableForFood = diff / 1.10;
-                const plateData = restaurants[type];
-                
-                let itemsAdded = 0;
-                plateData.forEach(plate => {
+                restaurants[type].forEach(plate => {
                     const count = Math.floor(availableForFood / plate.price);
                     if (count > 0) {
                         const item = document.createElement('div');
-                        item.style.display = 'flex';
-                        item.style.alignItems = 'center';
-                        item.style.gap = '4px';
-                        item.style.fontSize = '0.75rem';
-                        item.style.background = '#fff';
-                        item.style.padding = '3px 8px';
-                        item.style.borderRadius = '12px';
-                        item.style.border = '1px solid #f0f0f0';
-                        item.style.boxShadow = '0 1px 2px rgba(0,0,0,0.02)';
+                        item.style = 'display:flex; align-items:center; gap:4px; font-size:0.75rem; background:#fff; padding:3px 8px; border-radius:12px; border:1px solid #f0f0f0; box-shadow:0 1px 2px rgba(0,0,0,0.02)';
                         item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:10px; height:10px;"></div> <b>${count}</b>`;
                         affordList.appendChild(item);
-                        itemsAdded++;
                     }
                 });
-                if (itemsAdded === 0) affordSection.style.display = 'none';
+                if (affordList.innerHTML === '') affordSection.style.display = 'none';
             }
         } else {
-            progContainer.style.display = 'none';
-            remRow.style.display = 'none';
+            progContainer.style.display = 'none'; remRow.style.display = 'none';
             document.getElementById('affordabilitySection').style.display = 'none';
             summaryBox.classList.remove('near-budget', 'over-budget');
         }
 
-        // 2. Table Calculation
         if (roomState.roomId) {
             let tablePlateTotal = currentData.plateSubtotal;
             let tableCustomTotal = customSubtotal;
-
-            const plateData = restaurants[type];
-            const priceMap = {};
-            plateData.forEach(p => priceMap[p.id] = p.price);
-
+            const priceMap = {}; restaurants[type].forEach(p => priceMap[p.id] = p.price);
             for (const peer of Object.values(roomState.peers)) {
                 if (peer.restaurant === type && peer.counts) {
                     for (const [pId, pCount] of Object.entries(peer.counts)) {
-                        if (priceMap[pId]) {
-                            tablePlateTotal += (priceMap[pId] * pCount);
-                        }
+                        if (priceMap[pId]) tablePlateTotal += (priceMap[pId] * pCount);
                     }
                 }
                 if (peer.restaurant === type && peer.customItems) {
                     tableCustomTotal += peer.customItems.reduce((s, i) => s + (i.price * i.qty), 0);
                 }
             }
-
             const tSubtotal = tablePlateTotal + tableCustomTotal;
-            const tService = tSubtotal * 0.10;
-            const tTotal = tSubtotal + tService;
-
+            const tTotal = tSubtotal * 1.10;
             document.getElementById('tableSubtotal').innerText = tSubtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
-            document.getElementById('tableService').innerText = tService.toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('tableService').innerText = (tSubtotal * 0.10).toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('tableTotalFull').innerText = tTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+            document.getElementById('tableBillSection').style.display = 'block';
         } else {
             document.getElementById('tableBillSection').style.display = 'none';
         }
@@ -1231,15 +1118,12 @@
         loadData();
         const urlParams = new URLSearchParams(window.location.search);
         const tableParam = urlParams.get('table');
-        
-        if (roomState.myName) {
-            document.getElementById('userNameInput').value = roomState.myName;
-        }
-
         updateLobbyUI();
-
-        if (tableParam && roomState.myName) {
-            joinRoom(tableParam);
+        updateTowerToggleUI();
+        if (tableParam && !roomState.roomId) {
+            // They have a link but maybe no name. updateLobbyUI handles showing name input.
+            if (roomState.myName) joinRoom(tableParam);
+            else showNameInput();
         } else if (localStorage.getItem('sushi_roomId') && roomState.myName) {
             joinRoom(localStorage.getItem('sushi_roomId'));
         } else if (!loadData()) {
