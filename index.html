@@ -447,22 +447,38 @@
         </h1>
     </div>
 
-    <!-- ABLY LOBBY SECTION -->
+        <!-- ABLY LOBBY SECTION -->
     <div id="lobbySection" style="margin-bottom: 1.5rem; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; text-align: center;">
-        <div id="nameInputSection">
-            <input type="text" id="userNameInput" placeholder="Enter your name..." style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; width: 80%; max-width: 200px; text-align: center;">
-            <br>
-            <button onclick="saveName()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Join / Host</button>
+        <div id="startMultiplayerSection">
+            <button onclick="showNameInput()" style="padding: 10px 20px; background: var(--blue); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">🌐 Sync with Friends</button>
         </div>
+        
+        <div id="nameInputSection" style="display: none;">
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #666;">Enter your name to start syncing:</p>
+            <input type="text" id="userNameInput" placeholder="Your Name" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; width: 80%; max-width: 200px; text-align: center;">
+            <div style="display: flex; gap: 5px; justify-content: center;">
+                <button onclick="saveName()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Continue</button>
+                <button onclick="resetLobby()" style="padding: 8px 15px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Cancel</button>
+            </div>
+        </div>
+
         <div id="roomControls" style="display: none;">
-            <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 0.9rem;">Name: <span id="displayName" style="color: var(--accent);"></span></p>
-            <button onclick="hostRoom()" style="padding: 8px 15px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Host New Table</button>
+            <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 0.9rem;">Welcome, <span id="displayName" style="color: var(--accent);"></span>!</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                <button onclick="hostRoom()" style="width: 100%; max-width: 200px; padding: 10px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Host New Table</button>
+                <div style="display: flex; gap: 5px; width: 100%; max-width: 200px;">
+                    <input type="text" id="joinRoomInput" placeholder="Table Code" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ddd; text-align: center; text-transform: uppercase;">
+                    <button onclick="joinRoomFromInput()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Join</button>
+                </div>
+                <button onclick="resetLobby()" style="background:none; border:none; color:#aaa; font-size:0.75rem; cursor:pointer; text-decoration:underline;">Change Name</button>
+            </div>
         </div>
+
         <div id="activeRoomSection" style="display: none;">
             <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 0.9rem; color: var(--accent);">Table ID: <span id="roomIdDisplay"></span></p>
             <div id="qrcode" style="display: flex; justify-content: center; margin: 10px 0;"></div>
             <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #666;">At table: <span id="usersList"></span></p>
-            <button onclick="leaveRoom()" style="margin-top: 10px; padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Leave Table</button>
+            <button onclick="leaveRoom()" style="margin-top: 15px; padding: 8px 20px; background: #e74c3c; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">Leave Table</button>
         </div>
     </div>
 
