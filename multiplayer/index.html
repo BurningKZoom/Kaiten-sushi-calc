@@ -782,29 +782,41 @@
         }
     }
 
-        function initAbly() {
+            function initAbly() {
+        const errEl = document.getElementById('lobbyError');
+        const contBtn = document.getElementById('lobbyContinueBtn');
+        const joinInputBtn = document.querySelector('#roomControls button[onclick="joinRoomFromInput()"]');
+        
+        if (contBtn) contBtn.innerText = 'Connecting...';
+        if (joinInputBtn) joinInputBtn.innerText = '...';
+
         if (!ably) {
             ably = new Ably.Realtime({ key: ABLY_API_KEY, clientId: roomState.myUserId });
         }
         
         const tempChannel = ably.channels.get('test:' + roomState.roomId);
 
-        // --- SMART NAME VALIDATION ---
         tempChannel.presence.get((err, members) => {
+            if (contBtn) contBtn.innerText = 'Continue';
+            if (joinInputBtn) joinInputBtn.innerText = 'Join';
+
             if (err) {
                 console.error("Presence error:", err);
                 return;
             }
 
             const nameTaken = members.some(m => 
-                m.data.name === roomState.myName && m.clientId !== roomState.myUserId
+                m.data && m.data.name === roomState.myName && m.clientId !== roomState.myUserId
             );
 
             if (nameTaken) {
-                document.getElementById('lobbyError').innerText = `Name "${roomState.myName}" is already taken at this table!`;
-                document.getElementById('lobbyError').style.display = 'block';
+                errEl.innerText = `Name "${roomState.myName}" is already taken at this table!`;
+                errEl.style.display = 'block';
                 
-                // Reset State
+                // Show name input again if it was hidden
+                document.getElementById('nameInputSection').style.display = 'block';
+                document.getElementById('roomControls').style.display = 'none';
+
                 roomState.roomId = null;
                 localStorage.removeItem('sushi_roomId');
                 const url = new URL(window.location);
@@ -814,15 +826,11 @@
                 return;
             }
 
-            // Success: Connect officially
             channel = tempChannel;
-
             channel.subscribe('syncState', (message) => {
                 if (message.clientId !== roomState.myUserId) {
                     roomState.peers[message.clientId] = message.data;
-                    updateUsersList();
-                    updateUI();
-                    renderTower();
+                    updateUsersList(); updateUI(); renderTower();
                 }
             });
 
@@ -831,14 +839,10 @@
             });
             channel.presence.subscribe('leave', (member) => {
                 delete roomState.peers[member.clientId];
-                updateUsersList();
-                updateUI();
-                renderTower();
+                updateUsersList(); updateUI(); renderTower();
             });
 
-            // Enter presence with my name
             channel.presence.enter({ name: roomState.myName });
-
             channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
                 if (!err && resultPage.items.length > 0) {
                     resultPage.items.forEach(msg => {
@@ -846,9 +850,7 @@
                             roomState.peers[msg.clientId] = msg.data;
                         }
                     });
-                    updateUsersList();
-                    updateUI();
-                    renderTower();
+                    updateUsersList(); updateUI(); renderTower();
                 }
             });
             publishMyState();
