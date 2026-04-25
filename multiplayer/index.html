@@ -954,7 +954,7 @@
         saveData();
     }
 
-    function renderTower() {
+        function renderTower() {
         const type = document.getElementById('restaurantSelect').value;
         const tower = document.getElementById('plateTower');
         const summary = document.getElementById('towerSummary');
@@ -978,18 +978,20 @@
         let totalViewPrice = 0;
         const plateData = restaurants[type];
 
-        // Include plates in total
+        // CALCULATE TOTAL VIEW PRICE (Plates + Custom Items)
+        // 1. Plates
         plateData.forEach(plate => {
             const count = combinedCounts[plate.id] || 0;
             totalViewPrice += (count * plate.price);
         });
 
-        // Include custom items in total
+        // 2. Custom Items
         if (currentTowerView === 'personal') {
             state.data[type].customItems.forEach(item => {
                 totalViewPrice += (item.price * item.qty);
             });
-        } else if (roomState.roomId) {
+        } else {
+            // Table view: include everyone's custom items
             state.data[type].customItems.forEach(item => {
                 totalViewPrice += (item.price * item.qty);
             });
@@ -1007,7 +1009,10 @@
             if (count > 0) {
                 totalCount += count;
                 for (let i = 0; i < count; i++) { allPlates.push(plate.id); }
+                
+                // PERCENTAGE CALCULATION
                 const percentage = totalViewPrice > 0 ? Math.round(((count * plate.price) / totalViewPrice) * 100) : 0;
+                
                 const item = document.createElement('div');
                 item.style.display = 'flex';
                 item.style.alignItems = 'center';
@@ -1048,7 +1053,7 @@
         tower.appendChild(stackContainer);
     }
 
-    function addCustomItem() {
+function addCustomItem() {
         const type = document.getElementById('restaurantSelect').value;
         const currentData = state.data[type];
         const nameInput = document.getElementById('customName');
@@ -1210,3 +1215,15 @@
         }
     };
 </script>
+
+<div id="qrModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeQRCode()">&times;</span>
+        <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--accent);">Table QR Code</h3>
+        <div id="qrcode-modal" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
+        <p style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">Table ID: <b id="modalRoomId" style="color: var(--accent);"></b></p>
+        <p style="font-size: 0.75rem; color: #aaa;">Scan this to join the table</p>
+    </div>
+</div>
+</body>
+</html>
