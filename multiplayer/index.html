@@ -573,6 +573,17 @@
     localStorage.setItem('sushi_userId', roomState.myUserId);
     let currentTowerView = 'personal';
 
+        function showNameInput() {
+        document.getElementById('startMultiplayerSection').style.display = 'none';
+        document.getElementById('nameInputSection').style.display = 'block';
+    }
+
+    function resetLobby() {
+        roomState.myName = '';
+        localStorage.removeItem('sushi_userName');
+        updateLobbyUI();
+    }
+
     function saveName() {
         const name = document.getElementById('userNameInput').value.trim();
         if (name) {
@@ -613,6 +624,21 @@
         }
         roomState.roomId = null;
         roomState.peers = {};
+        roomState.myName = '';
+        localStorage.removeItem('sushi_roomId');
+        localStorage.removeItem('sushi_userName');
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('table');
+        window.history.pushState({}, '', url);
+        
+        updateLobbyUI();
+        updateTowerToggleUI();
+        updateUI();
+        renderTower();
+    }
+        roomState.roomId = null;
+        roomState.peers = {};
         localStorage.removeItem('sushi_roomId');
         
         const url = new URL(window.location);
@@ -624,16 +650,40 @@
         renderTower();
     }
 
-    function updateLobbyUI() {
+        function updateLobbyUI() {
+        const startSection = document.getElementById('startMultiplayerSection');
         const nameSection = document.getElementById('nameInputSection');
         const controlsSection = document.getElementById('roomControls');
         const activeSection = document.getElementById('activeRoomSection');
 
-        if (!roomState.myName) {
+        // Reset visibility
+        startSection.style.display = 'none';
+        nameSection.style.display = 'none';
+        controlsSection.style.display = 'none';
+        activeSection.style.display = 'none';
+
+        if (roomState.roomId) {
+            activeSection.style.display = 'block';
+            document.getElementById('roomIdDisplay').innerText = roomState.roomId;
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById("qrcode"), {
+                text: window.location.href,
+                width: 128,
+                height: 128
+            });
+            document.getElementById('tableBillSection').style.display = 'block';
+        } else if (roomState.myName) {
+            controlsSection.style.display = 'block';
+            document.getElementById('displayName').innerText = roomState.myName;
+            document.getElementById('tableBillSection').style.display = 'none';
+        } else if (document.getElementById('userNameInput').parentElement.style.display === 'block') {
+            // This is a bit of a hack to handle the "intermediate" name input state
             nameSection.style.display = 'block';
-            controlsSection.style.display = 'none';
-            activeSection.style.display = 'none';
-        } else if (!roomState.roomId) {
+        } else {
+            startSection.style.display = 'block';
+            document.getElementById('tableBillSection').style.display = 'none';
+        }
+    } else if (!roomState.roomId) {
             nameSection.style.display = 'none';
             controlsSection.style.display = 'block';
             activeSection.style.display = 'none';
