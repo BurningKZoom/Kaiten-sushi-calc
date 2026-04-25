@@ -477,7 +477,7 @@
         <h3 style="margin: 0; font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em;">🍣 Plate Tower</h3>
         <div style="display: flex; gap: 5px;">
             <button id="towerViewBtn" onclick="toggleTowerView()" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #ddd; background: var(--accent); color: white; font-size: 0.75rem; cursor: pointer; font-weight: bold;">View: Personal</button>
-            <button id="towerModeBtn" onclick="toggleTowerMode()" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #ddd; background: #fff; font-size: 0.75rem; cursor: pointer; color: #666; font-weight: bold;">Separate Stacks</button>
+            
         </div>
     </div>
     <div id="towerContainer" style="display: flex; background: #fff; border-radius: 12px; border: 1px solid #eee; min-height: 120px; padding: 15px; gap: 15px; overflow-x: auto; align-items: flex-end;">
@@ -796,22 +796,13 @@
         state = loadedState;
         document.getElementById('restaurantSelect').value = state.lastActive;
         document.getElementById('targetPrice').value = state.targetPrice;
-        if (state.towerMode) {
-            const label = state.towerMode === 'combined' ? 'Separate Stacks' : 'Combined Stack';
-            document.getElementById('towerModeBtn').innerText = label;
-        }
+        
         
         initApp(true);
         return true;
     }
 
-    function toggleTowerMode() {
-        state.towerMode = state.towerMode === 'combined' ? 'split' : 'combined';
-        const label = state.towerMode === 'combined' ? 'Separate Stacks' : 'Combined Stack';
-        document.getElementById('towerModeBtn').innerText = label;
-        renderTower();
-        saveData();
-    }
+    
 
     function switchRestaurant() {
         saveData();
