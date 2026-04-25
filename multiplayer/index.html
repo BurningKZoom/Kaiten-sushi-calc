@@ -782,30 +782,49 @@
         }
     }
 
-            function initAbly() {
+                function initAbly() {
         const errEl = document.getElementById('lobbyError');
         const contBtn = document.getElementById('lobbyContinueBtn');
         const joinInputBtn = document.querySelector('#roomControls button[onclick="joinRoomFromInput()"]');
         
+        if (errEl) errEl.style.display = 'none';
         if (contBtn) contBtn.innerText = 'Connecting...';
         if (joinInputBtn) joinInputBtn.innerText = '...';
 
         if (!ably) {
-            ably = new Ably.Realtime({ key: ABLY_API_KEY, clientId: roomState.myUserId });
+            // Use transport order that works better with Brave/Privacy blockers
+            ably = new Ably.Realtime({ 
+                key: ABLY_API_KEY, 
+                clientId: roomState.myUserId,
+                transports: ['web_socket', 'xhr_streaming', 'xhr_polling']
+            });
         }
         
         const tempChannel = ably.channels.get('test:' + roomState.roomId);
 
+        // Set a timeout to prevent "nothing happens" state
+        const connectionTimeout = setTimeout(() => {
+            if (contBtn && contBtn.innerText === 'Connecting...') {
+                contBtn.innerText = 'Continue';
+                if (joinInputBtn) joinInputBtn.innerText = 'Join';
+                errEl.innerText = "Connection taking too long. Try refreshing or disabling Brave Shields.";
+                errEl.style.display = 'block';
+            }
+        }, 5000);
+
         tempChannel.presence.get((err, members) => {
+            clearTimeout(connectionTimeout);
             if (contBtn) contBtn.innerText = 'Continue';
             if (joinInputBtn) joinInputBtn.innerText = 'Join';
 
             if (err) {
                 console.error("Presence error:", err);
+                errEl.innerText = "Error connecting to table. Please try again.";
+                errEl.style.display = 'block';
                 return;
             }
 
-            const nameTaken = members.some(m => 
+            const nameTaken = members && members.some(m => 
                 m.data && m.data.name === roomState.myName && m.clientId !== roomState.myUserId
             );
 
@@ -813,9 +832,9 @@
                 errEl.innerText = `Name "${roomState.myName}" is already taken at this table!`;
                 errEl.style.display = 'block';
                 
-                // Show name input again if it was hidden
                 document.getElementById('nameInputSection').style.display = 'block';
                 document.getElementById('roomControls').style.display = 'none';
+                document.getElementById('activeRoomSection').style.display = 'none';
 
                 roomState.roomId = null;
                 localStorage.removeItem('sushi_roomId');
@@ -844,10 +863,10 @@
 
             channel.presence.enter({ name: roomState.myName });
             channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
-                if (!err && resultPage.items.length > 0) {
+                if (!err && resultPage && resultPage.items.length > 0) {
                     resultPage.items.forEach(msg => {
                         if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
-                            roomState.peers[msg.clientId] = msg.data;
+                            if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
                         }
                     });
                     updateUsersList(); updateUI(); renderTower();
