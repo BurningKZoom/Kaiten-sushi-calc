@@ -1192,6 +1192,40 @@ function addCustomItem() {
             document.getElementById('tableSubtotal').innerText = tSubtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('tableService').innerText = (tSubtotal * 0.10).toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('tableTotalFull').innerText = tTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+            // --- User Breakdown ---
+            const breakdownContainer = document.getElementById('usersBreakdown');
+            breakdownContainer.innerHTML = '<div style="font-size: 0.65rem; color: #aaa; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; text-align:center;">Who owes what:</div>';
+            
+            // Add Me
+            const myRow = document.createElement('div');
+            myRow.className = 'row';
+            myRow.style.fontSize = '0.85rem';
+            myRow.style.marginBottom = '6px';
+            myRow.innerHTML = `<span>${roomState.myName || 'Me'} (You)</span> <span>฿${total.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>`;
+            breakdownContainer.appendChild(myRow);
+            
+            // Add Peers
+            for (const peer of Object.values(roomState.peers)) {
+                if (peer.restaurant === type) {
+                    let peerPlateSub = 0;
+                    if (peer.counts) {
+                        for (const [pId, pCount] of Object.entries(peer.counts)) {
+                            if (priceMap[pId]) peerPlateSub += (priceMap[pId] * pCount);
+                        }
+                    }
+                    const peerCustomSub = (peer.customItems || []).reduce((s, i) => s + (i.price * i.qty), 0);
+                    const peerTotal = (peerPlateSub + peerCustomSub) * 1.10;
+                    
+                    const pRow = document.createElement('div');
+                    pRow.className = 'row';
+                    pRow.style.fontSize = '0.85rem';
+                    pRow.style.marginBottom = '6px';
+                    pRow.innerHTML = `<span>${peer.name || 'Friend'}</span> <span>฿${peerTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>`;
+                    breakdownContainer.appendChild(pRow);
+                }
+            }
+
             document.getElementById('tableBillSection').style.display = 'block';
         } else {
             document.getElementById('tableBillSection').style.display = 'none';
