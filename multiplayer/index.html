@@ -666,7 +666,7 @@
         document.getElementById('qrModal').style.display = 'flex';
         document.getElementById('qrcode-modal').innerHTML = '';
         new QRCode(document.getElementById("qrcode-modal"), {
-            text: window.location.origin + window.location.pathname + "?table=" + roomState.roomId,
+            text: window.location.href.split("?")[0] + "?table=" + roomState.roomId,
             width: 180,
             height: 180
         });
