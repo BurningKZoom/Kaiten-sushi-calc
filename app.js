@@ -729,7 +729,8 @@ function updateUI() {
         rankEl.innerText = rankText;
         rankEl.className = "rank-label " + rankClass;
 
-        // --- User Breakdown ---        const breakdownContainer = document.getElementById('usersBreakdown');
+        // --- User Breakdown ---
+        const breakdownContainer = document.getElementById('usersBreakdown');
         breakdownContainer.innerHTML = '<div style="font-size: 0.65rem; color: #aaa; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; text-align:center;">Who owes what:</div>';
         
         // Add Me
