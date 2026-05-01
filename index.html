@@ -75,7 +75,6 @@
     <div class="custom-section" style="position: relative;">
         <h3>
             <span>➕ Special Menu</span>
-            <small style="display: block; font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(non-standard plate price or manual split plate with friends!)</small>
         </h3>
         <button class="help-btn" onclick="showSpecialGuide()">?</button>
         <div class="custom-input-group">
@@ -137,27 +136,27 @@
         <div class="status-msg warning-over">🚫 Over Budget!</div>
 
         <!-- TABLE BILL SECTION -->
-        <div id="tableBillSection" style="margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; display: none;">
-            <h3 style="margin:0 0 10px 0; font-size: 1rem; color: var(--accent); text-align: center;">Table Bill</h3>
+        <div id="tableBillSection" style="margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; display: none; font-size: 0.85rem;">
+            <h3 style="margin:0 0 8px 0; font-size: 0.9rem; color: var(--accent); text-align: center;">Table Bill</h3>
             
-            <div style="text-align: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent);"><span id="tableTotalPlates">0</span> <small style="font-size: 0.9rem; font-weight: normal; color: #aaa;">plates</small></div>
-                <div id="tableRankDisplay" style="margin-top: 8px;"></div>
+            <div style="text-align: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent);"><span id="tableTotalPlates">0</span> <small style="font-size: 0.8rem; font-weight: normal; color: #aaa;">plates</small></div>
+                <div id="tableRankDisplay" style="margin-top: 5px;"></div>
             </div>
 
-            <div class="row">
+            <div class="row" style="margin-bottom: 5px;">
                 <span>Table Subtotal:</span>
                 <span>฿<span id="tableSubtotal">0.00</span></span>
             </div>
-            <div class="row">
+            <div class="row" style="margin-bottom: 5px;">
                 <span>Service Charge (10%):</span>
                 <span>฿<span id="tableService">0.00</span></span>
             </div>
-            <div class="row total" style="color: var(--accent);">
+            <div class="row total" style="color: var(--accent); font-size: 1.1rem; margin-top: 10px; padding-top: 10px;">
                 <span>Table Total:</span>
                 <span>฿<span id="tableTotalFull">0.00</span></span>
             </div>
-            <div id="usersBreakdown" style="margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 12px;"></div>
+            <div id="usersBreakdown" style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 8px;"></div>
         </div>
     </div>
 
