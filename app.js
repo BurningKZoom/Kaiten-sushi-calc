@@ -284,16 +284,25 @@ function updateLobbyUI() {
         channel = tempChannel;
         channel.subscribe('syncState', (message) => {
             if (message.clientId !== roomState.myUserId) {
-                roomState.peers[message.clientId] = message.data;
+                roomState.peers[message.clientId] = { ...message.data, isOffline: false };
+                updateUsersList(); updateUI(); renderTower();
+            }
+        });
+
+        channel.subscribe('explicitLeave', (message) => {
+            if (message.clientId !== roomState.myUserId) {
+                delete roomState.peers[message.clientId];
                 updateUsersList(); updateUI(); renderTower();
             }
         });
 
         channel.presence.subscribe('enter', (member) => {
+            if (roomState.peers[member.clientId]) roomState.peers[member.clientId].isOffline = false;
             if (member.clientId !== roomState.myUserId) publishMyState();
         });
+
         channel.presence.subscribe('leave', (member) => {
-            delete roomState.peers[member.clientId];
+            if (roomState.peers[member.clientId]) roomState.peers[member.clientId].isOffline = true;
             updateUsersList(); updateUI(); renderTower();
         });
 
