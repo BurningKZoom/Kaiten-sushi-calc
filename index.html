@@ -6,462 +6,7 @@
     <title>Kaiten Sushi Calculator</title>
     <!-- Sushi Favicon -->
     <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f363.png">
-    <style>
-        :root {
-            --red: #e74c3c;
-            --blue: #3498db;
-            --green: #2ecc71;
-            --yellow: #f1c40f;
-            --brown: #5d4037;
-            --pink: #ff9ff3;
-            --grey: #95a5a6;
-            --white-gold: #f5f6fa;
-            --red-gold: #880000;
-            --solid-gold: #d4af37;
-            --blue-checkered: #2980b9;
-            --black-gold: #1a1a1a;
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
-            --accent: #2c3e50;
-            
-            /* Sushiro specific */
-            --sushiro-red: #e74c3c;
-            --sushiro-silver: #bdc3c7;
-            --sushiro-gold: #d4af37;
-            --sushiro-black: #2c3e50;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            background-color: var(--card-bg);
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            width: 100%;
-            max-width: 500px;
-            box-sizing: border-box;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 1rem;
-            }
-            .plate-grid {
-                gap: 10px;
-            }
-        }
-
-        .header {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            gap: 10px;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.4rem;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        select#restaurantSelect {
-            padding: 8px 12px;
-            border-radius: 10px;
-            border: 2px solid #f0f0f0;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            background-color: #fff;
-            color: var(--accent);
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        select#restaurantSelect:hover {
-            border-color: #e0e0e0;
-            background-color: #f9f9f9;
-        }
-
-        .budget-section {
-            margin-bottom: 1.5rem;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid #eee;
-        }
-
-        .budget-section label {
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #666;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .budget-section input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            text-align: right;
-            outline-color: var(--accent);
-            min-width: 0;
-        }
-
-        .plate-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 1.5rem;
-        }
-
-        .plate-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            border: 1px solid #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .plate-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            font-size: 0.95rem;
-        }
-
-        .plate-color-dot {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: 1px solid rgba(0,0,0,0.1);
-            box-sizing: border-box;
-            flex-shrink: 0;
-        }
-
-        .controls-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #f5f5f5;
-            border-radius: 25px;
-            padding: 3px;
-        }
-
-        .ctrl-btn {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.1s;
-        }
-
-        .btn-minus { background: #fff; color: #e74c3c; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn-plus { background: var(--accent); color: #fff; }
-        .ctrl-btn:active { transform: scale(0.9); }
-
-        .count-display {
-            font-weight: bold;
-            font-size: 1.1rem;
-            min-width: 35px;
-            text-align: center;
-        }
-
-        /* TOWER STYLES */
-        .stack {
-            display: flex;
-            flex-direction: column-reverse;
-            align-items: center;
-            width: 70px;
-            padding-bottom: 5px;
-        }
-
-        .visual-plate {
-            width: 60px;
-            height: 12px;
-            border-radius: 50% / 40%;
-            margin-bottom: -8px;
-            border: 1px solid rgba(0,0,0,0.15);
-            position: relative;
-            background-color: #fff;
-            box-sizing: content-box;
-            z-index: 1;
-        }
-
-        /* Plain colors for tower plates */
-        .dot-white, .dot-s-white { background-color: #fff; border: 1px solid #ddd; }
-        .dot-red, .dot-s-red { background-color: var(--red); }
-        .dot-blue { background-color: var(--blue); }
-        .dot-green { background-color: var(--green); }
-        .dot-yellow { background-color: var(--yellow); }
-        .dot-brown { background-color: #5d4037; }
-        .dot-pink { background-color: var(--pink); }
-        .dot-grey { background-color: var(--grey); }
-        .dot-white-gold { background-color: #fff; border: 1.5px solid #d4af37; }
-        .dot-red-gold { background-color: #880000; border: 1.5px solid #d4af37; }
-        .dot-solid-gold, .dot-s-gold { background-color: #d4af37; border: 1px solid #b8860b; }
-        .dot-blue-check { 
-            background-color: #2980b9;
-            background-image: repeating-conic-gradient(#2980b9 0% 25%, #3498db 0% 50%);
-            background-size: 8px 8px;
-        }
-        .dot-black-gold, .dot-s-black { background-color: #1a1a1a; border: 1.5px solid #d4af37; }
-        .dot-s-silver { background-color: #bdc3c7; }
-
-        @keyframes dropIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .custom-section {
-            margin-top: 1rem;
-            padding: 15px;
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #eee;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-        }
-
-        .custom-section h3 {
-            margin: 0 0 12px 0;
-            font-size: 0.85rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .custom-input-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-
-        .custom-input-group input {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            outline-color: var(--accent);
-            min-width: 0;
-        }
-
-        .input-name { flex: 2 1 120px; }
-        .input-price { flex: 1 1 60px; }
-        .input-qty { flex: 0 1 50px; text-align: center; }
-
-        .btn-add-custom {
-            padding: 10px 15px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            flex: 1 1 auto;
-        }
-
-        .custom-items-list {
-            max-height: 150px;
-            overflow-y: auto;
-        }
-
-        .custom-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 10px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        .btn-remove-custom {
-            background: none;
-            border: none;
-            color: #e74c3c;
-            cursor: pointer;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .summary {
-            margin-top: 1.5rem;
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid #eee;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .summary.near-budget {
-            background-color: #fffaf0;
-            border-color: #fbd38d;
-            transform: translateY(-2px);
-        }
-
-        .summary.over-budget {
-            background-color: #fff5f5;
-            border-color: #feb2b2;
-            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.05);
-            transform: translateY(-2px);
-        }
-
-        .progress-container {
-            height: 8px;
-            background: #e2e8f0;
-            border-radius: 4px;
-            margin: 15px 0;
-            overflow: hidden;
-            display: none;
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--green);
-            transition: width 0.4s ease-out, background-color 0.3s;
-        }
-
-        .row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            color: #666;
-            font-size: 0.95rem;
-        }
-
-        .row.remaining {
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: var(--green);
-            display: none;
-            background: rgba(46, 204, 113, 0.1);
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-
-        .near-budget .row.remaining { color: #dd6b20; background: rgba(221, 107, 32, 0.1); }
-        .over-budget .row.remaining { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
-
-        .row.total {
-            border-top: 2px solid #333;
-            margin-top: 15px;
-            padding-top: 15px;
-            font-weight: bold;
-            font-size: 1.3rem;
-            color: #000;
-        }
-
-        .status-msg {
-            text-align: center;
-            font-size: 0.85rem;
-            margin-top: 10px;
-            font-weight: bold;
-            display: none;
-        }
-
-        .near-budget .status-msg.warning-near { display: block; color: #dd6b20; }
-        .over-budget .status-msg.warning-over { display: block; color: #e74c3c; }
-
-        .btn-reset {
-            width: 100%;
-            margin-top: 1.5rem;
-            padding: 14px;
-            border: none;
-            background-color: #f0f0f0;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            color: #888;
-            transition: all 0.2s;
-        }
-
-        .btn-reset:hover { background: #e8e8e8; color: #666; }
-
-        /* Katsu Midori Plate Colors */
-        .dot-red { background-color: var(--red); }
-        .dot-blue { background-color: var(--blue); }
-        .dot-green { background-color: var(--green); }
-        .dot-yellow { background-color: var(--yellow); }
-        .dot-brown { background-color: var(--brown); }
-        .dot-pink { background-color: var(--pink); }
-        .dot-grey { background-color: var(--grey); }
-        .dot-white-gold { background-color: #fff; border: 2px solid var(--solid-gold); }
-        .dot-red-gold { background-color: var(--red-gold); border: 2px solid var(--solid-gold); }
-        .dot-solid-gold { background-color: var(--solid-gold); }
-        .dot-blue-check { background-image: repeating-conic-gradient(#2980b9 0% 25%, #3498db 0% 50%) 50% / 10px 10px; }
-        .dot-black-gold { background-color: var(--black-gold); border: 2px solid var(--solid-gold); }
-
-        /* Sushiro Plate Colors */
-        .dot-s-white { background-color: #fff; border: 1px solid #ddd; }
-        .dot-s-red { background-color: var(--sushiro-red); }
-        .dot-s-silver { background-color: var(--sushiro-silver); }
-        .dot-s-gold { background-color: var(--sushiro-gold); }
-        .dot-s-black { background-color: var(--sushiro-black); }
-    
-        /* QR Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .modal-content {
-            background: #fff;
-            padding: 25px;
-            border-radius: 20px;
-            text-align: center;
-            position: relative;
-            max-width: 300px;
-            width: 100%;
-        }
-        .modal-close {
-            position: absolute;
-            top: 10px; right: 15px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #aaa;
-        }
-
-    </style>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -477,7 +22,7 @@
         </h1>
     </div>
 
-        <!-- ABLY LOBBY SECTION -->
+    <!-- ABLY LOBBY SECTION -->
     <div id="lobbySection" style="margin-bottom: 1.5rem; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; text-align: center;">
         <div id="lobbyError" style="display: none; color: #e74c3c; font-size: 0.75rem; margin-bottom: 15px; font-weight: bold; padding: 10px; background: #fdeaea; border-radius: 8px; border: 1px solid #fadbd8;"></div>
         <div id="startMultiplayerSection">
@@ -490,8 +35,6 @@
             <div style="display: flex; gap: 5px; justify-content: center;">
                 <button onclick="saveName()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Continue</button>
                 <button onclick="resetLobby()" style="padding: 8px 15px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Cancel</button>
-            
-            
             </div>
         </div>
 
@@ -499,9 +42,9 @@
             <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 0.9rem;">Welcome, <span id="displayName" style="color: var(--accent);"></span>!</p>
             <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
                 <button onclick="hostRoom()" style="width: 100%; max-width: 200px; padding: 10px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Host New Table</button>
-                <div style="display: flex; gap: 8px; width: 100%; max-width: 240px; box-sizing: border-box;">
+                <div style="display: flex; gap: 8px; width: 100%; max-width: 200px; box-sizing: border-box;">
                     <input type="text" id="joinRoomInput" placeholder="Code" style="flex: 1; min-width: 0; padding: 10px; border-radius: 10px; border: 1px solid #ddd; text-align: center; text-transform: uppercase; font-size: 0.9rem;">
-                    <button onclick="joinRoomFromInput()" style="padding: 10px 20px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; white-space: nowrap;">Join</button>
+                    <button onclick="joinRoomFromInput()" style="padding: 10px 15px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; white-space: nowrap;">Join</button>
                 </div>
                 <button onclick="resetLobby()" style="background:none; border:none; color:#aaa; font-size:0.75rem; cursor:pointer; text-decoration:underline;">Change Name</button>
             </div>
@@ -509,9 +52,12 @@
 
         <div id="activeRoomSection" style="display: none;">
             <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 0.9rem; color: var(--accent);">Table ID: <span id="roomIdDisplay"></span></p>
-            <div style="display: flex; gap: 8px; justify-content: center; margin: 10px 0;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0;">
                 <button onclick="showQRCode()" style="padding: 8px 15px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 5px;">
                     <span style="font-size: 1rem;">📱</span> Show QR
+                </button>
+                <button id="copyLinkBtn" onclick="copyTableLink()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <span>🔗</span> Copy Link
                 </button>
                 <button onclick="leaveRoom()" style="padding: 8px 15px; background: #fff; color: #e74c3c; border: 1px solid #e74c3c; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">Leave</button>
             </div>
@@ -525,6 +71,21 @@
     </div>
     
     <div id="plates-container" class="plate-grid"></div>
+
+    <div class="custom-section" style="position: relative;">
+        <h3>
+            <span>➕ Special Menu</span>
+            <small style="display: block; font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(non-standard plate price or manual split plate with friends!)</small>
+        </h3>
+        <button class="help-btn" onclick="showSpecialGuide()">?</button>
+        <div class="custom-input-group">
+            <input type="text" id="customName" class="input-name" placeholder="Item name">
+            <input type="number" id="customPrice" class="input-price" placeholder="Price" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+            <input type="number" id="customQty" class="input-qty" value="1" min="1" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+            <button class="btn-add-custom" onclick="addCustomItem()">Add</button>
+        </div>
+        <div id="customItemsList" class="custom-items-list"></div>
+    </div>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; margin-bottom: 8px; padding: 0 5px; width: 100%; box-sizing: border-box;">
         <h3 style="margin: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;">🍣 Plate Tower</h3>
@@ -540,20 +101,6 @@
         </div>
     </div>
 
-    <div class="custom-section">
-        <h3>
-            <span>➕ Special Menu</span>
-            <small style="display: block; font-size: 0.7rem; text-transform: none; font-weight: normal; opacity: 0.8; margin-top: 2px;">(other than the normal dish price)</small>
-        </h3>
-        <div class="custom-input-group">
-            <input type="text" id="customName" class="input-name" placeholder="Item name">
-            <input type="number" id="customPrice" class="input-price" placeholder="Price" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
-            <input type="number" id="customQty" class="input-qty" value="1" min="1" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
-            <button class="btn-add-custom" onclick="addCustomItem()">Add</button>
-        </div>
-        <div id="customItemsList" class="custom-items-list"></div>
-    </div>
-
     <div class="summary" id="summaryBox">
         <div class="row">
             <span>Subtotal:</span>
@@ -563,7 +110,6 @@
             <span>Service Charge (10%):</span>
             <span>฿<span id="service">0.00</span></span>
         </div>
-        <!-- VAT Row (Hidden as it's included in price) -->
         <div class="row" id="vatRow" style="display: none;">
             <span>VAT (7%):</span>
             <span>฿<span id="vat">0.00</span></span>
@@ -593,12 +139,18 @@
         <!-- TABLE BILL SECTION -->
         <div id="tableBillSection" style="margin-top: 20px; border-top: 2px solid #333; padding-top: 15px; display: none;">
             <h3 style="margin:0 0 10px 0; font-size: 1rem; color: var(--accent); text-align: center;">Table Bill</h3>
+            
+            <div style="text-align: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent);"><span id="tableTotalPlates">0</span> <small style="font-size: 0.9rem; font-weight: normal; color: #aaa;">plates</small></div>
+                <div id="tableRankDisplay" style="margin-top: 8px;"></div>
+            </div>
+
             <div class="row">
                 <span>Table Subtotal:</span>
                 <span>฿<span id="tableSubtotal">0.00</span></span>
             </div>
             <div class="row">
-                <span>Table Service (10%):</span>
+                <span>Service Charge (10%):</span>
                 <span>฿<span id="tableService">0.00</span></span>
             </div>
             <div class="row total" style="color: var(--accent);">
@@ -612,736 +164,26 @@
     <button class="btn-reset" onclick="reset()">Clear All</button>
 </div>
 
-<script>
-    // --- ABLY CONFIGURATION ---
-    // --- SECURITY GUARD ---
-    const _auth = {
-        p1: "bQw6qw.VKgWOA",
-        p2: "cyDRDoW203VwoE17Iv1DCcucwZCklOPptuZhtu1",
-        p3: "bd_0",
-        get k() { return this.p1 + ":" + this.p2 + this.p3; },
-        get isAuthorized() {
-            const host = window.location.hostname;
-            return host === 'burningkzoom.github.io' || host === 'localhost' || host === '127.0.0.1';
-        }
-    };
-    let ably = null;
-    let channel = null;
-
-    let roomState = {
-        roomId: null,
-        myUserId: localStorage.getItem('sushi_userId') || 'user_' + Math.random().toString(36).substr(2, 9),
-        myName: localStorage.getItem('sushi_userName') || '',
-        peers: {}
-    };
-    localStorage.setItem('sushi_userId', roomState.myUserId);
-    let currentTowerView = 'personal';
-
-    const restaurants = {
-        katsu: [
-            { id: 'red', price: 40, label: 'Red' },
-            { id: 'blue', price: 50, label: 'Blue' },
-            { id: 'green', price: 60, label: 'Green' },
-            { id: 'yellow', price: 70, label: 'Yellow' },
-            { id: 'brown', price: 80, label: 'Brown' },
-            { id: 'pink', price: 90, label: 'Pink' },
-            { id: 'grey', price: 100, label: 'Grey' },
-            { id: 'white-gold', price: 120, label: 'White-Gold' },
-            { id: 'red-gold', price: 140, label: 'Red-Gold' },
-            { id: 'solid-gold', price: 150, label: 'Solid Gold' },
-            { id: 'blue-check', price: 160, label: 'Blue Check' },
-            { id: 'black-gold', price: 180, label: 'Black-Gold' }
-        ],
-        sushiro: [
-            { id: 's-white', price: 30, label: 'White' },
-            { id: 's-red', price: 40, label: 'Red' },
-            { id: 's-silver', price: 60, label: 'Silver' },
-            { id: 's-gold', price: 80, label: 'Gold' },
-            { id: 's-black', price: 120, label: 'Black' }
-        ]
-    };
-
-    let state = {
-        timestamp: Date.now(),
-        lastActive: 'katsu',
-        targetPrice: '',
-        towerMode: 'combined',
-        data: {
-            katsu: { counts: {}, plateSubtotal: 0, customItems: [] },
-            sushiro: { counts: {}, plateSubtotal: 0, customItems: [] }
-        }
-    };
-
-    // --- LOBBY & SYNC FUNCTIONS ---
-    
-        // --- HAPTIC FEEDBACK ---
-    function triggerHaptic() {
-        if ("vibrate" in navigator) {
-            navigator.vibrate(50); // Short 50ms vibration
-        }
-    }
-
-    function showQRCode() {
-        if (!roomState.roomId) return;
-        document.getElementById('modalRoomId').innerText = roomState.roomId;
-        document.getElementById('qrModal').style.display = 'flex';
-        document.getElementById('qrcode-modal').innerHTML = '';
-        new QRCode(document.getElementById("qrcode-modal"), {
-            text: window.location.href.split("?")[0] + "?table=" + roomState.roomId,
-            width: 180,
-            height: 180
-        });
-    }
-
-    function closeQRCode() {
-        document.getElementById('qrModal').style.display = 'none';
-    }
-
-    function showNameInput() {
-        document.getElementById("lobbyError").style.display = "none";
-        document.getElementById('startMultiplayerSection').style.display = 'none';
-        document.getElementById('nameInputSection').style.display = 'block';
-    }
-
-    function resetLobby() {
-        roomState.myName = '';
-        localStorage.removeItem('sushi_userName');
-        updateLobbyUI();
-        updateTowerToggleUI();
-    }
-
-    function saveName() {
-        const name = document.getElementById('userNameInput').value.trim();
-        if (name) {
-            roomState.myName = name;
-            localStorage.setItem('sushi_userName', name);
-            updateLobbyUI();
-            updateTowerToggleUI();
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const tableParam = urlParams.get('table');
-            if (tableParam && !roomState.roomId) {
-                joinRoom(tableParam);
-            }
-        }
-    }
-
-    function hostRoom() {
-        const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-        joinRoom(newRoomId);
-        setTimeout(showQRCode, 300);
-    }
-
-    function joinRoom(roomId) {
-        document.getElementById("lobbyError").style.display = "none";
-        roomState.roomId = roomId;
-        localStorage.setItem('sushi_roomId', roomId);
+<div id="specialGuideModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 350px;">
+        <span class="modal-close" onclick="closeSpecialGuide()">&times;</span>
+        <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--accent);">Special Menu Guide</h3>
         
-        const url = new URL(window.location);
-        url.searchParams.set('table', roomId);
-        window.history.pushState({}, '', url);
+        <div class="guide-item">
+            <b>🍣 Non-Standard Price Plate</b>
+            <p>Use this for items that don't match standard plate colors, such as special seasonal dishes or drinks.</p>
+            <img src="assets/special-ex.png" class="guide-img" alt="Non-standard price example">
+        </div>
 
-        updateLobbyUI();
-        updateTowerToggleUI();
-        initAbly();
-    }
+        <div class="guide-item" style="margin-bottom: 20px;">
+            <b>🤝 Manual Split Plate</b>
+            <p>Share high-priced plates with friends easily. Split a ฿150 plate by entering ฿50 each.</p>
+            <img src="assets/split-ex.png" class="guide-img" alt="Split plate example">
+        </div>
 
-    function joinRoomFromInput() {
-        document.getElementById("lobbyError").style.display = "none";
-        const code = document.getElementById('joinRoomInput').value.trim().toUpperCase();
-        if (code) {
-            joinRoom(code);
-        }
-    }
-
-    function leaveRoom() {
-        if (channel) {
-            channel.presence.leave();
-            channel.detach();
-        }
-        roomState.roomId = null;
-        roomState.peers = {};
-        roomState.myName = '';
-        localStorage.removeItem('sushi_roomId');
-        localStorage.removeItem('sushi_userName');
-        
-        const url = new URL(window.location);
-        url.searchParams.delete('table');
-        window.history.pushState({}, '', url);
-        
-        updateLobbyUI();
-        updateTowerToggleUI();
-        updateUI();
-        renderTower();
-    }
-
-    function updateLobbyUI() {
-        const startSection = document.getElementById('startMultiplayerSection');
-        const nameSection = document.getElementById('nameInputSection');
-        const controlsSection = document.getElementById('roomControls');
-        const activeSection = document.getElementById('activeRoomSection');
-
-        startSection.style.display = 'none';
-        nameSection.style.display = 'none';
-        controlsSection.style.display = 'none';
-        activeSection.style.display = 'none';
-
-        if (roomState.roomId) {
-            activeSection.style.display = 'block';
-            document.getElementById('roomIdDisplay').innerText = roomState.roomId;
-            document.getElementById('tableBillSection').style.display = 'block';
-        } else if (roomState.myName) {
-            controlsSection.style.display = 'block';
-            document.getElementById('displayName').innerText = roomState.myName;
-            document.getElementById('tableBillSection').style.display = 'none';
-        } else {
-            startSection.style.display = 'block';
-            document.getElementById('tableBillSection').style.display = 'none';
-        }
-    }
-
-                    function initAbly() {
-        const errEl = document.getElementById('lobbyError');
-        const contBtn = document.getElementById('lobbyContinueBtn');
-        
-        // Domain Lock Check
-        if (!_auth.isAuthorized) {
-            console.error("Unauthorized Domain: Sync Disabled.");
-            if (errEl) {
-                errEl.innerText = "Sync is only available on the official website.";
-                errEl.style.display = 'block';
-            }
-            return;
-        } 
-        const joinInputBtn = document.querySelector('#roomControls button[onclick="joinRoomFromInput()"]');
-        
-        if (errEl) errEl.style.display = 'none';
-        if (contBtn) contBtn.innerText = 'Connecting...';
-        if (joinInputBtn) joinInputBtn.innerText = '...';
-
-        if (!ably) {
-            ably = new Ably.Realtime({ 
-                key: _auth.k, 
-                clientId: roomState.myUserId,
-                transports: ['web_socket', 'xhr_streaming', 'xhr_polling']
-            });
-        }
-        
-        const tempChannel = ably.channels.get('test:' + roomState.roomId);
-
-        const connectionTimeout = setTimeout(() => {
-            if (contBtn && (contBtn.innerText === 'Connecting...' || contBtn.innerText === '...')) {
-                if (contBtn) contBtn.innerText = 'Continue';
-                if (joinInputBtn) joinInputBtn.innerText = 'Join';
-                errEl.innerText = "Connection slow. Try refreshing or check Brave Shields.";
-                errEl.style.display = 'block';
-            }
-        }, 8000);
-
-        tempChannel.presence.get((err, members) => {
-            clearTimeout(connectionTimeout);
-            if (contBtn) contBtn.innerText = 'Continue';
-            if (joinInputBtn) joinInputBtn.innerText = 'Join';
-
-            if (err) {
-                errEl.innerText = "Error connecting to table. Please try again.";
-                errEl.style.display = 'block';
-                return;
-            }
-
-            const nameTaken = members && members.some(m => 
-                m.data && m.data.name === roomState.myName && m.clientId !== roomState.myUserId
-            );
-
-            if (nameTaken) {
-                errEl.innerText = `Name "${roomState.myName}" is already taken at this table!`;
-                errEl.style.display = 'block';
-                
-                // CRITICAL: Clear name and room so user is forced back to Name Input
-                roomState.myName = '';
-                roomState.roomId = null;
-                localStorage.removeItem('sushi_userName');
-                localStorage.removeItem('sushi_roomId');
-                
-                const url = new URL(window.location);
-                url.searchParams.delete('table');
-                window.history.pushState({}, '', url);
-                
-                updateLobbyUI();
-                return;
-            }
-
-            channel = tempChannel;
-            channel.subscribe('syncState', (message) => {
-                if (message.clientId !== roomState.myUserId) {
-                    roomState.peers[message.clientId] = message.data;
-                    updateUsersList(); updateUI(); renderTower();
-                }
-            });
-
-            channel.presence.subscribe('enter', (member) => {
-                if (member.clientId !== roomState.myUserId) publishMyState();
-            });
-            channel.presence.subscribe('leave', (member) => {
-                delete roomState.peers[member.clientId];
-                updateUsersList(); updateUI(); renderTower();
-            });
-
-            channel.presence.enter({ name: roomState.myName });
-            channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
-                if (!err && resultPage && resultPage.items.length > 0) {
-                    resultPage.items.forEach(msg => {
-                        if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
-                            if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
-                        }
-                    });
-                    updateUsersList(); updateUI(); renderTower();
-                }
-            });
-            publishMyState();
-        });
-    }
-
-    function updateUsersList() {
-        let names = [roomState.myName + " (You)"];
-        for (const [id, data] of Object.entries(roomState.peers)) {
-            if (data.name) names.push(data.name);
-        }
-        document.getElementById('usersList').innerText = names.join(', ');
-    }
-
-    function publishMyState() {
-        if (!channel || !roomState.roomId) return;
-        const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        channel.publish('syncState', {
-            name: roomState.myName,
-            restaurant: type,
-            counts: currentData.counts,
-            customItems: currentData.customItems
-        });
-    }
-
-    function setTowerView(view) {
-        currentTowerView = view;
-        updateTowerToggleUI();
-        renderTower();
-    }
-
-    function updateTowerToggleUI() {
-        const personalBtn = document.getElementById('viewPersonalBtn');
-        const tableBtn = document.getElementById('viewTableBtn');
-        const container = document.getElementById('towerToggleContainer');
-
-        if (!roomState.roomId) {
-            container.style.display = 'none';
-            return;
-        }
-        container.style.display = 'flex';
-
-        if (currentTowerView === 'personal') {
-            personalBtn.style.background = 'var(--accent)';
-            personalBtn.style.color = 'white';
-            tableBtn.style.background = 'transparent';
-            tableBtn.style.color = '#666';
-        } else {
-            tableBtn.style.background = 'var(--accent)';
-            tableBtn.style.color = 'white';
-            personalBtn.style.background = 'transparent';
-            personalBtn.style.color = '#666';
-        }
-    }
-
-    // --- CORE CALCULATOR FUNCTIONS ---
-    function formatBudget(input) {
-        let value = input.value.replace(/,/g, '');
-        if (value === '' || isNaN(value)) {
-            input.value = '';
-            return;
-        }
-        input.value = Number(value).toLocaleString('en-US');
-    }
-
-    function getBudgetValue() {
-        return parseFloat(document.getElementById('targetPrice').value.replace(/,/g, '')) || 0;
-    }
-
-    function saveData() {
-        state.timestamp = Date.now();
-        state.lastActive = document.getElementById('restaurantSelect').value;
-        state.targetPrice = document.getElementById('targetPrice').value;
-        localStorage.setItem('sushi_calc_v2', JSON.stringify(state));
-        publishMyState();
-    }
-
-    function loadData() {
-        const saved = localStorage.getItem('sushi_calc_v2');
-        if (!saved) return false;
-        const loadedState = JSON.parse(saved);
-        if (Date.now() - loadedState.timestamp > 6 * 60 * 60 * 1000) {
-            localStorage.removeItem('sushi_calc_v2');
-            return false;
-        }
-        state = loadedState;
-        document.getElementById('restaurantSelect').value = state.lastActive;
-        document.getElementById('targetPrice').value = state.targetPrice;
-        initApp(true);
-        return true;
-    }
-
-    function switchRestaurant() {
-        saveData();
-        initApp(true);
-    }
-
-    function initApp(isSwitching = false) {
-        const type = document.getElementById('restaurantSelect').value;
-        const plateData = restaurants[type];
-        const container = document.getElementById('plates-container');
-        container.innerHTML = '';
-        if (!state.data[type]) state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
-        const currentData = state.data[type];
-        
-        plateData.forEach(plate => {
-            if (currentData.counts[plate.id] === undefined) currentData.counts[plate.id] = 0;
-            const card = document.createElement('div');
-            card.className = 'plate-card';
-            card.innerHTML = `
-                <div class="plate-info">
-                    <div class="plate-color-dot dot-${plate.id}"></div>
-                    <span>฿${plate.price}</span>
-                </div>
-                <div class="controls-row">
-                    <button class="ctrl-btn btn-minus" onclick="changeCount('${plate.id}', -1, ${plate.price})">−</button>
-                    <div class="count-display" id="count-${plate.id}">${currentData.counts[plate.id]}</div>
-                    <button class="ctrl-btn btn-plus" onclick="changeCount('${plate.id}', 1, ${plate.price})">+</button>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-        renderTower();
-        renderCustomList();
-        updateUI();
-        if (!isSwitching) saveData();
-    }
-
-    function changeCount(id, delta, price) {
-        const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        const newCount = (currentData.counts[id] || 0) + delta;
-        if (newCount < 0) return;
-        triggerHaptic();
-        currentData.counts[id] = newCount;
-        currentData.plateSubtotal += (delta * price);
-        document.getElementById(`count-${id}`).innerText = newCount;
-        renderTower();
-        updateUI();
-        saveData();
-    }
-
-        function renderTower() {
-        const type = document.getElementById('restaurantSelect').value;
-        const tower = document.getElementById('plateTower');
-        const summary = document.getElementById('towerSummary');
-        tower.innerHTML = '';
-        summary.innerHTML = '';
-        
-        let combinedCounts = { ...state.data[type].counts };
-        if (currentTowerView === 'table' && roomState.roomId) {
-            for (const peer of Object.values(roomState.peers)) {
-                if (peer.restaurant === type && peer.counts) {
-                    for (const [pId, pCount] of Object.entries(peer.counts)) {
-                        combinedCounts[pId] = (combinedCounts[pId] || 0) + pCount;
-                    }
-                }
-            }
-        }
-
-        summary.style.display = 'flex';
-        let allPlates = [];
-        let totalCount = 0;
-        let totalViewPrice = 0;
-        const plateData = restaurants[type];
-
-        // CALCULATE TOTAL VIEW PRICE (Plates + Custom Items)
-        // 1. Plates
-        plateData.forEach(plate => {
-            const count = combinedCounts[plate.id] || 0;
-            totalViewPrice += (count * plate.price);
-        });
-
-        // 2. Custom Items
-        if (currentTowerView === 'personal') {
-            state.data[type].customItems.forEach(item => {
-                totalViewPrice += (item.price * item.qty);
-            });
-        } else {
-            // Table view: include everyone's custom items
-            state.data[type].customItems.forEach(item => {
-                totalViewPrice += (item.price * item.qty);
-            });
-            for (const peer of Object.values(roomState.peers)) {
-                if (peer.restaurant === type && peer.customItems) {
-                    peer.customItems.forEach(item => {
-                        totalViewPrice += (item.price * item.qty);
-                    });
-                }
-            }
-        }
-
-        plateData.forEach(plate => {
-            const count = combinedCounts[plate.id] || 0;
-            if (count > 0) {
-                totalCount += count;
-                for (let i = 0; i < count; i++) { allPlates.push(plate.id); }
-                
-                // PERCENTAGE CALCULATION
-                const percentage = totalViewPrice > 0 ? Math.round(((count * plate.price) / totalViewPrice) * 100) : 0;
-                
-                const item = document.createElement('div');
-                item.style.display = 'flex';
-                item.style.alignItems = 'center';
-                item.style.gap = '8px';
-                item.style.fontSize = '0.75rem';
-                item.style.whiteSpace = 'nowrap';
-                item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:12px !important; height:12px !important; border-width:1px !important; border-radius: 50% !important;"></div> <span style="min-width:15px"><b>${count}</b></span> <span style="color:#aaa; font-size:0.6rem;">(${percentage}%)</span>`;
-                summary.appendChild(item);
-            }
-        });
-
-        if (allPlates.length === 0) {
-            tower.innerHTML = '<span style="color:#ccc; font-style:italic; font-size:0.8rem;">Plate stack will appear here</span>';
-            summary.style.display = 'none';
-            return;
-        }
-
-        const stackContainer = document.createElement('div');
-        stackContainer.style.display = 'flex';
-        stackContainer.style.flexDirection = 'column';
-        stackContainer.style.alignItems = 'center';
-        const totalLabel = document.createElement('div');
-        totalLabel.style.fontSize = '0.75rem';
-        totalLabel.style.fontWeight = 'bold';
-        totalLabel.style.marginBottom = '8px';
-        totalLabel.style.color = 'var(--accent)';
-        totalLabel.innerText = `Total: ${totalCount}`;
-        stackContainer.appendChild(totalLabel);
-
-        const stack = document.createElement('div');
-        stack.className = 'stack';
-        allPlates.forEach(id => {
-            const plate = document.createElement('div');
-            plate.className = `visual-plate dot-${id}`;
-            stack.appendChild(plate);
-        });
-        stackContainer.appendChild(stack);
-        tower.appendChild(stackContainer);
-    }
-
-function addCustomItem() {
-        const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        const nameInput = document.getElementById('customName');
-        const priceInput = document.getElementById('customPrice');
-        const qtyInput = document.getElementById('customQty');
-        const name = nameInput.value.trim() || 'Extra Item';
-        const price = parseFloat(priceInput.value) || 0;
-        const qty = parseInt(qtyInput.value) || 1;
-        if (price > 0 && qty > 0) {
-            currentData.customItems.push({ id: Date.now(), name, price, qty });
-            triggerHaptic();
-            nameInput.value = ''; priceInput.value = ''; qtyInput.value = '1';
-            renderCustomList(); updateUI(); saveData();
-        }
-    }
-
-    function removeCustomItem(id) {
-        const type = document.getElementById('restaurantSelect').value;
-        state.data[type].customItems = state.data[type].customItems.filter(item => item.id !== id);
-        renderCustomList(); updateUI(); saveData();
-    }
-
-    function changeCustomQty(id, delta) {
-        const type = document.getElementById('restaurantSelect').value;
-        const item = state.data[type].customItems.find(i => i.id === id);
-        if (item) {
-            item.qty += delta;
-            triggerHaptic();
-            if (item.qty <= 0) removeCustomItem(id);
-            else { renderCustomList(); updateUI(); saveData(); }
-        }
-    }
-
-    function renderCustomList() {
-        const type = document.getElementById('restaurantSelect').value;
-        const list = document.getElementById('customItemsList');
-        list.innerHTML = '';
-        state.data[type].customItems.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'custom-item';
-            div.style.alignItems = 'center';
-            div.innerHTML = `
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: bold; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
-                    <div style="color: #aaa; font-size: 0.7rem;">฿${item.price.toLocaleString()}/unit</div>
-                </div>
-                <div class="controls-row" style="padding: 1px; min-width: 85px; margin: 0 10px;">
-                    <button class="ctrl-btn btn-minus" style="width: 24px; height: 24px; font-size: 0.9rem;" onclick="changeCustomQty(${item.id}, -1)">−</button>
-                    <div class="count-display" style="font-size: 0.85rem; min-width: 20px;">${item.qty}</div>
-                    <button class="ctrl-btn btn-plus" style="width: 24px; height: 24px; font-size: 0.9rem;" onclick="changeCustomQty(${item.id}, 1)">+</button>
-                </div>
-                <div style="font-weight: bold; font-size: 0.85rem; min-width: 60px; text-align: right; margin-right: 5px;">฿${(item.price * item.qty).toLocaleString()}</div>
-                <button class="btn-remove-custom" onclick="removeCustomItem(${item.id})">×</button>
-            `;
-            list.appendChild(div);
-        });
-    }
-
-    function reset() {
-        if (!confirm('Clear all items for THIS restaurant?')) return;
-        const type = document.getElementById('restaurantSelect').value;
-        state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
-        initApp(true); saveData();
-    }
-
-    function updateUI() {
-        const type = document.getElementById('restaurantSelect').value;
-        const currentData = state.data[type];
-        const customSubtotal = currentData.customItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        const subtotal = currentData.plateSubtotal + customSubtotal;
-        const service = subtotal * 0.10;
-        const total = subtotal + service;
-        const target = getBudgetValue();
-
-        document.getElementById('subtotal').innerText = subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
-        document.getElementById('service').innerText = service.toLocaleString('en-US', {minimumFractionDigits: 2});
-        document.getElementById('total').innerText = total.toLocaleString('en-US', {minimumFractionDigits: 2});
-
-        const summaryBox = document.getElementById('summaryBox');
-        const progContainer = document.getElementById('progContainer');
-        const progBar = document.getElementById('progBar');
-        const remRow = document.getElementById('remRow');
-        const remVal = document.getElementById('remaining');
-        const remLabel = document.getElementById('remLabel');
-
-        if (target > 0) {
-            progContainer.style.display = 'block'; remRow.style.display = 'flex';
-            const percent = Math.min((total / target) * 100, 100);
-            progBar.style.width = percent + '%';
-            const diff = target - total;
-            remVal.innerText = Math.abs(diff).toLocaleString('en-US', {minimumFractionDigits: 2});
-            summaryBox.classList.remove('near-budget', 'over-budget');
-            const affordSection = document.getElementById('affordabilitySection');
-            const affordList = document.getElementById('affordabilityList');
-
-            if (total > target) {
-                summaryBox.classList.add('over-budget'); progBar.style.backgroundColor = '#e74c3c';
-                remLabel.innerText = 'Over:'; affordSection.style.display = 'none';
-            } else {
-                remLabel.innerText = 'Remaining:';
-                if (total > target * 0.8) { summaryBox.classList.add('near-budget'); progBar.style.backgroundColor = '#f1c40f'; }
-                else { progBar.style.backgroundColor = '#2ecc71'; }
-                affordSection.style.display = 'block'; affordList.innerHTML = '';
-                const availableForFood = diff / 1.10;
-                restaurants[type].forEach(plate => {
-                    const count = Math.floor(availableForFood / plate.price);
-                    if (count > 0) {
-                        const item = document.createElement('div');
-                        item.style = 'display:flex; align-items:center; gap:4px; font-size:0.75rem; background:#fff; padding:3px 8px; border-radius:12px; border:1px solid #f0f0f0; box-shadow:0 1px 2px rgba(0,0,0,0.02)';
-                        item.innerHTML = `<div class="plate-color-dot dot-${plate.id}" style="width:10px; height:10px;"></div> <b>${count}</b>`;
-                        affordList.appendChild(item);
-                    }
-                });
-                if (affordList.innerHTML === '') affordSection.style.display = 'none';
-            }
-        } else {
-            progContainer.style.display = 'none'; remRow.style.display = 'none';
-            document.getElementById('affordabilitySection').style.display = 'none';
-            summaryBox.classList.remove('near-budget', 'over-budget');
-        }
-
-        if (roomState.roomId) {
-            let tablePlateTotal = currentData.plateSubtotal;
-            let tableCustomTotal = customSubtotal;
-            const priceMap = {}; restaurants[type].forEach(p => priceMap[p.id] = p.price);
-            for (const peer of Object.values(roomState.peers)) {
-                if (peer.restaurant === type && peer.counts) {
-                    for (const [pId, pCount] of Object.entries(peer.counts)) {
-                        if (priceMap[pId]) tablePlateTotal += (priceMap[pId] * pCount);
-                    }
-                }
-                if (peer.restaurant === type && peer.customItems) {
-                    tableCustomTotal += peer.customItems.reduce((s, i) => s + (i.price * i.qty), 0);
-                }
-            }
-            const tSubtotal = tablePlateTotal + tableCustomTotal;
-            const tTotal = tSubtotal * 1.10;
-            document.getElementById('tableSubtotal').innerText = tSubtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
-            document.getElementById('tableService').innerText = (tSubtotal * 0.10).toLocaleString('en-US', {minimumFractionDigits: 2});
-            document.getElementById('tableTotalFull').innerText = tTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
-
-            // --- User Breakdown ---
-            const breakdownContainer = document.getElementById('usersBreakdown');
-            breakdownContainer.innerHTML = '<div style="font-size: 0.65rem; color: #aaa; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; text-align:center;">Who owes what:</div>';
-            
-            // Add Me
-            const myRow = document.createElement('div');
-            myRow.className = 'row';
-            myRow.style.fontSize = '0.85rem';
-            myRow.style.marginBottom = '6px';
-            myRow.innerHTML = `<span>${roomState.myName || 'Me'} (You)</span> <span>฿${total.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>`;
-            breakdownContainer.appendChild(myRow);
-            
-            // Add Peers
-            for (const peer of Object.values(roomState.peers)) {
-                if (peer.restaurant === type) {
-                    let peerPlateSub = 0;
-                    if (peer.counts) {
-                        for (const [pId, pCount] of Object.entries(peer.counts)) {
-                            if (priceMap[pId]) peerPlateSub += (priceMap[pId] * pCount);
-                        }
-                    }
-                    const peerCustomSub = (peer.customItems || []).reduce((s, i) => s + (i.price * i.qty), 0);
-                    const peerTotal = (peerPlateSub + peerCustomSub) * 1.10;
-                    
-                    const pRow = document.createElement('div');
-                    pRow.className = 'row';
-                    pRow.style.fontSize = '0.85rem';
-                    pRow.style.marginBottom = '6px';
-                    pRow.innerHTML = `<span>${peer.name || 'Friend'}</span> <span>฿${peerTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>`;
-                    breakdownContainer.appendChild(pRow);
-                }
-            }
-
-            document.getElementById('tableBillSection').style.display = 'block';
-        } else {
-            document.getElementById('tableBillSection').style.display = 'none';
-        }
-    }
-
-    window.onload = () => {
-        const dataLoaded = loadData();
-        const urlParams = new URLSearchParams(window.location.search);
-        const tableParam = urlParams.get('table');
-        
-        if (tableParam && !roomState.roomId) {
-            if (roomState.myName) {
-                joinRoom(tableParam);
-            } else {
-                showNameInput();
-            }
-        } else if (localStorage.getItem('sushi_roomId') && roomState.myName) {
-            joinRoom(localStorage.getItem('sushi_roomId'));
-        }
-
-        updateLobbyUI();
-        updateTowerToggleUI();
-        
-        if (!dataLoaded) {
-            initApp();
-        }
-    };
-</script>
+        <button onclick="closeSpecialGuide()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">Got it!</button>
+    </div>
+</div>
 
 <div id="qrModal" class="modal-overlay">
     <div class="modal-content">
@@ -1352,5 +194,7 @@ function addCustomItem() {
         <p style="font-size: 0.75rem; color: #aaa;">Scan this to join the table</p>
     </div>
 </div>
+
+<script src="app.js"></script>
 </body>
 </html>
