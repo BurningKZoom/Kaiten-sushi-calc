@@ -1320,18 +1320,24 @@ function addCustomItem() {
     }
 
     window.onload = () => {
-        loadData();
+        const dataLoaded = loadData();
         const urlParams = new URLSearchParams(window.location.search);
         const tableParam = urlParams.get('table');
-        updateLobbyUI();
-        updateTowerToggleUI();
+        
         if (tableParam && !roomState.roomId) {
-            // They have a link but maybe no name. updateLobbyUI handles showing name input.
-            if (roomState.myName) joinRoom(tableParam);
-            else showNameInput();
+            if (roomState.myName) {
+                joinRoom(tableParam);
+            } else {
+                showNameInput();
+            }
         } else if (localStorage.getItem('sushi_roomId') && roomState.myName) {
             joinRoom(localStorage.getItem('sushi_roomId'));
-        } else if (!loadData()) {
+        }
+
+        updateLobbyUI();
+        updateTowerToggleUI();
+        
+        if (!dataLoaded) {
             initApp();
         }
     };
