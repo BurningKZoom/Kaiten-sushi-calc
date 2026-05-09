@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaiten Sushi Calculator</title>
+    <!-- Sushi Favicon -->
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f363.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🍣 
+            <select id="restaurantSelect" onchange="switchRestaurant()">
+                <option value="katsu">Katsu Midori</option>
+                <option value="sushiro">Sushiro</option>
+            </select>
+        </h1>
+    </div>
+
+    <!-- ABLY LOBBY SECTION -->
+    <div id="lobbySection" style="margin-bottom: 1.5rem; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; text-align: center;">
+        <div id="lobbyError" style="display: none; color: #e74c3c; font-size: 0.75rem; margin-bottom: 15px; font-weight: bold; padding: 10px; background: #fdeaea; border-radius: 8px; border: 1px solid #fadbd8;"></div>
+        <div id="startMultiplayerSection">
+            <button onclick="showNameInput()" style="padding: 10px 20px; background: var(--blue); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">🌐 Sync with Friends</button>
+        </div>
+        
+        <div id="nameInputSection" style="display: none;">
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #666;">Enter your name to start syncing:</p>
+            <input type="text" id="userNameInput" placeholder="Your Name" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; width: 80%; max-width: 200px; text-align: center;">
+            <div style="display: flex; gap: 5px; justify-content: center;">
+                <button onclick="saveName()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Continue</button>
+                <button onclick="resetLobby()" style="padding: 8px 15px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Cancel</button>
+            </div>
+        </div>
+
+        <div id="roomControls" style="display: none;">
+            <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 0.9rem;">Welcome, <span id="displayName" style="color: var(--accent);"></span>!</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                <button onclick="hostRoom()" style="width: 100%; max-width: 200px; padding: 10px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Host New Table</button>
+                <div style="display: flex; gap: 8px; width: 100%; max-width: 200px; box-sizing: border-box;">
+                    <input type="text" id="joinRoomInput" placeholder="Code" style="flex: 1; min-width: 0; padding: 10px; border-radius: 10px; border: 1px solid #ddd; text-align: center; text-transform: uppercase; font-size: 0.9rem;">
+                    <button onclick="joinRoomFromInput()" style="padding: 10px 15px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.85rem; white-space: nowrap;">Join</button>
+                </div>
+                <button onclick="resetLobby()" style="background:none; border:none; color:#aaa; font-size:0.75rem; cursor:pointer; text-decoration:underline;">Change Name</button>
+            </div>
+        </div>
+
+        <div id="activeRoomSection" style="display: none;">
+            <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 0.9rem; color: var(--accent);">Table ID: <span id="roomIdDisplay"></span></p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0;">
+                <button onclick="showQRCode()" style="padding: 8px 15px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 1rem;">📱</span> Show QR
+                </button>
+                <button id="copyLinkBtn" onclick="copyTableLink()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <span>🔗</span> Copy Link
+                </button>
+                <button onclick="leaveRoom()" style="padding: 8px 15px; background: #fff; color: #e74c3c; border: 1px solid #e74c3c; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">Leave</button>
+            </div>
+            <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #888;">At table: <span id="usersList"></span></p>
+        </div>
+    </div>
+
+    <div class="budget-section">
+        <label for="targetPrice">Budget (฿):</label>
+        <input type="text" id="targetPrice" placeholder="e.g. 1,000" oninput="formatBudget(this); updateUI(); saveData()" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+    </div>
+    
+    <div id="plates-container" class="plate-grid"></div>
+
+    <div class="custom-section" style="position: relative;">
+        <h3>
+            <span>➕ Special Menu</span>
+        </h3>
+        <button class="help-btn" onclick="showSpecialGuide()">?</button>
+        <div class="custom-input-group">
+            <input type="text" id="customName" class="input-name" placeholder="Item name">
+            <input type="number" id="customPrice" class="input-price" placeholder="Price" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+            <input type="number" id="customQty" class="input-qty" value="1" min="1" onkeydown="if(['e','E','-','+'].includes(event.key)) event.preventDefault();">
+            <button class="btn-add-custom" onclick="addCustomItem()">Add</button>
+        </div>
+        <div id="customItemsList" class="custom-items-list"></div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; margin-bottom: 8px; padding: 0 5px; width: 100%; box-sizing: border-box;">
+        <h3 style="margin: 0; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;">🍣 Plate Tower</h3>
+        <div id="towerToggleContainer" style="display: none; background: #eee; border-radius: 20px; padding: 2px; display: flex; gap: 2px;">
+            <button id="viewPersonalBtn" onclick="setTowerView('personal')" style="padding: 4px 10px; border-radius: 18px; border: none; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">Personal</button>
+            <button id="viewTableBtn" onclick="setTowerView('table')" style="padding: 4px 10px; border-radius: 18px; border: none; font-size: 0.65rem; font-weight: bold; cursor: pointer; transition: all 0.2s;">Table</button>
+        </div>
+    </div>
+    <div id="towerContainer" style="display: flex; background: #fff; border-radius: 12px; border: 1px solid #eee; min-height: 120px; padding: 15px; gap: 15px; overflow-x: auto; align-items: flex-end;">
+        <div id="plateTower" style="flex: 1; display: flex; justify-content: center; align-items: flex-end; gap: 15px;"></div>
+        <div id="towerSummary" style="width: 80px; border-left: 1px solid #eee; padding-left: 15px; display: none; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto;">
+            <!-- Individual plate counts for combined mode -->
+        </div>
+    </div>
+
+    <div class="summary" id="summaryBox">
+        <div class="row">
+            <span>Subtotal:</span>
+            <span>฿<span id="subtotal">0.00</span></span>
+        </div>
+        <div class="row">
+            <span>Service Charge (10%):</span>
+            <span>฿<span id="service">0.00</span></span>
+        </div>
+        <div class="row" id="vatRow" style="display: none;">
+            <span>VAT (7%):</span>
+            <span>฿<span id="vat">0.00</span></span>
+        </div>
+
+        <div class="progress-container" id="progContainer">
+            <div class="progress-bar" id="progBar"></div>
+        </div>
+
+        <div class="row remaining" id="remRow">
+            <span id="remLabel">Remaining:</span>
+            <span>฿<span id="remaining">0.00</span></span>
+        </div>
+
+        <div id="affordabilitySection" style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 10px; display: none;">
+            <div style="font-size: 0.7rem; color: #aaa; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">You can still eat:</div>
+            <div id="affordabilityList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+        </div>
+
+        <div class="row total">
+            <span>My Total:</span>
+            <span>฿<span id="total">0.00</span></span>
+        </div>
+        <div class="status-msg warning-near">⚠️ Getting close to budget!</div>
+        <div class="status-msg warning-over">🚫 Over Budget!</div>
+
+        <!-- TABLE BILL SECTION -->
+        <div id="tableBillSection" style="margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; display: none; font-size: 0.85rem;">
+            <h3 style="margin:0 0 8px 0; font-size: 0.9rem; color: var(--accent); text-align: center;">Table Bill</h3>
+            
+            <div style="text-align: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent);"><span id="tableTotalPlates">0</span> <small style="font-size: 0.8rem; font-weight: normal; color: #aaa;">plates</small></div>
+                <div id="tableRankDisplay" style="margin-top: 5px;"></div>
+            </div>
+
+            <div class="row" style="margin-bottom: 5px;">
+                <span>Table Subtotal:</span>
+                <span>฿<span id="tableSubtotal">0.00</span></span>
+            </div>
+            <div class="row" style="margin-bottom: 5px;">
+                <span>Service Charge (10%):</span>
+                <span>฿<span id="tableService">0.00</span></span>
+            </div>
+            <div class="row total" style="color: var(--accent); font-size: 1.1rem; margin-top: 10px; padding-top: 10px;">
+                <span>Table Total:</span>
+                <span>฿<span id="tableTotalFull">0.00</span></span>
+            </div>
+            <div id="usersBreakdown" style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 8px;"></div>
+        </div>
+    </div>
+
+    <button class="btn-reset" onclick="reset()">Clear All</button>
+</div>
+
+<div id="specialGuideModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 350px;">
+        <span class="modal-close" onclick="closeSpecialGuide()">&times;</span>
+        <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--accent);">Special Menu Guide</h3>
+        
+        <div class="guide-item">
+            <b>🍣 Non-Standard Price Plate</b>
+            <p>Use this for items that don't match standard plate colors, such as special seasonal dishes or drinks.</p>
+            <img src="../assets/special-ex.png" class="guide-img" alt="Non-standard price example">
+        </div>
+
+        <div class="guide-item" style="margin-bottom: 20px;">
+            <b>🤝 Manual Split Plate</b>
+            <p>Share high-priced plates with friends easily. Split a ฿150 plate by entering ฿50 each.</p>
+            <img src="../assets/split-ex.png" class="guide-img" alt="Split plate example">
+        </div>
+
+        <button onclick="closeSpecialGuide()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">Got it!</button>
+    </div>
+</div>
+
+<div id="qrModal" class="modal-overlay">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeQRCode()">&times;</span>
+        <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--accent);">Table QR Code</h3>
+        <div id="qrcode-modal" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
+        <p style="font-size: 0.85rem; color: #666; margin-bottom: 5px;">Table ID: <b id="modalRoomId" style="color: var(--accent);"></b></p>
+        <p style="font-size: 0.75rem; color: #aaa;">Scan this to join the table</p>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
