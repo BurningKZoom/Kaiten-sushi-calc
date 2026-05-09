@@ -201,7 +201,7 @@ function leaveRoom() {
 function finalizeBill() {
     if (!channel || roomState.hostId !== roomState.myUserId) return;
     const newState = !roomState.isBillFinalized;
-    const actionText = newState ? "Finalize bill? This will lock counts for everyone." : "Un-finalize bill? This will allow everyone to edit counts again.";
+    const actionText = newState ? "Finalize bill? This will lock counts for everyone." : "Allow everyone to edit counts again?";
     
     if (confirm(actionText)) {
         channel.publish('finalizeBill', { hostId: roomState.myUserId, isFinalized: newState });
@@ -228,8 +228,8 @@ function updateLobbyUI() {
         const finalizeBtn = document.getElementById('finalizeBillBtn');
         if (roomState.hostId === roomState.myUserId) {
             finalizeBtn.style.display = 'block';
-            finalizeBtn.innerText = roomState.isBillFinalized ? '🔓 Un-finalize Bill' : '📝 Finalize Bill';
-            finalizeBtn.style.background = roomState.isBillFinalized ? '#95a5a6' : 'var(--orange)';
+            finalizeBtn.innerText = roomState.isBillFinalized ? '✏️ Edit Bill' : '📝 Finalize Bill';
+            finalizeBtn.style.background = roomState.isBillFinalized ? '#3498db' : 'var(--orange)';
         } else {
             finalizeBtn.style.display = 'none';
         }
