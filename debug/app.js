@@ -217,6 +217,7 @@ function updateLobbyUI() {
 
                 function initAbly() {
     const errEl = document.getElementById('lobbyError');
+    const inlineNameErrEl = document.getElementById('inlineNameError');
     const contBtn = document.getElementById('lobbyContinueBtn');
     
     // Domain Lock Check
@@ -231,6 +232,7 @@ function updateLobbyUI() {
     const joinInputBtn = document.querySelector('#roomControls button[onclick="joinRoomFromInput()"]');
     
     if (errEl) errEl.style.display = 'none';
+    if (inlineNameErrEl) inlineNameErrEl.style.display = 'none';
     if (contBtn) contBtn.innerText = 'Connecting...';
     if (joinInputBtn) joinInputBtn.innerText = '...';
 
@@ -278,8 +280,10 @@ function updateLobbyUI() {
             showNameInput();
 
             // Set error AFTER UI reset (since showNameInput hides it)
-            errEl.innerText = `Name "${takenName}" is already taken at this table!`;
-            errEl.style.display = 'block';
+            if (inlineNameErrEl) {
+                inlineNameErrEl.innerText = `Name "${takenName}" is already taken at this table!`;
+                inlineNameErrEl.style.display = 'block';
+            }
             return;
         }
 
