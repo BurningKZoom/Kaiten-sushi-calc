@@ -142,7 +142,7 @@ function saveName() {
 
 function hostRoom() {
     const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-    roomState.hostId = roomState.myUserId; // Set local host ID
+    roomState.hostId = roomState.myUserId; 
     joinRoom(newRoomId);
     setTimeout(showQRCode, 300);
 }
@@ -151,6 +151,11 @@ function joinRoom(roomId) {
     document.getElementById("lobbyError").style.display = "none";
     roomState.roomId = roomId;
     localStorage.setItem('sushi_roomId', roomId);
+    
+    // If I'm not already marked as host (from hostRoom), I'm a joiner
+    if (roomState.hostId !== roomState.myUserId) {
+        roomState.hostId = null; 
+    }
     
     const url = new URL(window.location);
     url.searchParams.set('table', roomId);
