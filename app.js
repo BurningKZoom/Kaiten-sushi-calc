@@ -267,17 +267,12 @@ function updateLobbyUI() {
             errEl.innerText = `Name "${roomState.myName}" is already taken at this table!`;
             errEl.style.display = 'block';
             
-            // CRITICAL: Clear name and room so user is forced back to Name Input
+            // CRITICAL: Clear name but keep room so user is forced back to Name Input for the SAME room
             roomState.myName = '';
-            roomState.roomId = null;
             localStorage.removeItem('sushi_userName');
-            localStorage.removeItem('sushi_roomId');
-            
-            const url = new URL(window.location);
-            url.searchParams.delete('table');
-            window.history.pushState({}, '', url);
             
             updateLobbyUI();
+            showNameInput();
             return;
         }
 
@@ -782,6 +777,9 @@ window.onload = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tableParam = urlParams.get('table');
     
+    updateLobbyUI();
+    updateTowerToggleUI();
+
     if (tableParam && !roomState.roomId) {
         if (roomState.myName) {
             joinRoom(tableParam);
@@ -791,9 +789,6 @@ window.onload = () => {
     } else if (localStorage.getItem('sushi_roomId') && roomState.myName) {
         joinRoom(localStorage.getItem('sushi_roomId'));
     }
-
-    updateLobbyUI();
-    updateTowerToggleUI();
     
     if (!dataLoaded) {
         initApp();
