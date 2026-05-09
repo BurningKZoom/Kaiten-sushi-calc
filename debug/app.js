@@ -268,15 +268,17 @@ function updateLobbyUI() {
         );
 
         if (nameTaken) {
-            errEl.innerText = `Name "${roomState.myName}" is already taken at this table!`;
-            errEl.style.display = 'block';
-            
             // CRITICAL: Clear name but keep room so user is forced back to Name Input for the SAME room
+            const takenName = roomState.myName;
             roomState.myName = '';
             localStorage.removeItem('sushi_userName');
             
             updateLobbyUI();
             showNameInput();
+
+            // Set error AFTER UI reset (since showNameInput hides it)
+            errEl.innerText = `Name "${takenName}" is already taken at this table!`;
+            errEl.style.display = 'block';
             return;
         }
 
