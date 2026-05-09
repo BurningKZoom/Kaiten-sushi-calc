@@ -318,34 +318,41 @@ function updateLobbyUI() {
             return;
         }
 
-        // Host Determination: Smallest clientId or first in presence is usually host, 
-        // but we'll use a specific message to announce host if needed. 
-        // For simplicity, first person in presence becomes host if no hostId set.
-        if (!roomState.hostId && members && members.length > 0) {
-            // Sort by timestamp to find the oldest member
-            const sorted = members.sort((a, b) => a.timestamp - b.timestamp);
+        // Host Determination: The oldest member (excluding myself) is the host.
+        const otherMembers = (members || []).filter(m => m.clientId !== roomState.myUserId);
+        if (!roomState.hostId && otherMembers.length > 0) {
+            const sorted = otherMembers.sort((a, b) => a.timestamp - b.timestamp);
             roomState.hostId = sorted[0].clientId;
+            console.log("Identified Host:", roomState.hostId);
         } else if (!roomState.hostId) {
             roomState.hostId = roomState.myUserId;
+            console.log("I am the Host");
         }
 
         channel = tempChannel;
+
+        // Helper for auto-matching restaurant
+        const checkAutoMatch = (peerData, peerId) => {
+            if (peerId !== roomState.hostId || peerId === roomState.myUserId) return;
+            
+            const currentRes = document.getElementById('restaurantSelect').value;
+            const peerRes = peerData.restaurant;
+            
+            // Check if local user has ANY data in the current restaurant
+            const myCurrentData = state.data[currentRes];
+            const hasPlates = Object.values(myCurrentData.counts).some(c => c > 0) || (myCurrentData.customItems && myCurrentData.customItems.length > 0);
+
+            if (peerRes && peerRes !== currentRes && !hasPlates) {
+                console.log(`Auto-switching to match Host Authority: ${peerRes}`);
+                document.getElementById('restaurantSelect').value = peerRes;
+                initApp(true);
+                updateLobbyUI(); // Refresh UI to show host-specific buttons if needed
+            }
+        };
+
         channel.subscribe('syncState', (message) => {
             if (message.clientId !== roomState.myUserId) {
-                // AUTO-MATCH RESTAURANT LOGIC (Host Authority Only)
-                const currentRes = document.getElementById('restaurantSelect').value;
-                const peerRes = message.data.restaurant;
-                
-                // If message is from HOST and I have NO counts yet, switch to match host
-                const myCurrentData = state.data[currentRes];
-                const hasPlates = Object.values(myCurrentData.counts).some(c => c > 0) || myCurrentData.customItems.length > 0;
-
-                if (message.clientId === roomState.hostId && peerRes && peerRes !== currentRes && !hasPlates) {
-                    console.log(`Auto-switching restaurant to match Host: ${peerRes}`);
-                    document.getElementById('restaurantSelect').value = peerRes;
-                    initApp(true);
-                }
-
+                checkAutoMatch(message.data, message.clientId);
                 roomState.peers[message.clientId] = { ...message.data, isOffline: false };
                 updateUsersList(); updateUI(); renderTower();
             }
@@ -383,7 +390,7 @@ function updateLobbyUI() {
         });
 
         channel.presence.enter({ name: roomState.myName });
-        channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
+        channel.history({ limit: 15, direction: 'backwards' }, (err, resultPage) => {
             if (!err && resultPage && resultPage.items.length > 0) {
                 // Find the MOST RECENT finalizeBill message to get current state
                 const finalizeMsg = resultPage.items.find(msg => msg.name === 'finalizeBill');
@@ -394,7 +401,11 @@ function updateLobbyUI() {
 
                 resultPage.items.forEach(msg => {
                     if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
-                        if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
+                        if (!roomState.peers[msg.clientId]) {
+                            roomState.peers[msg.clientId] = msg.data;
+                            // Also check for auto-match from history
+                            checkAutoMatch(msg.data, msg.clientId);
+                        }
                     }
                 });
                 updateUsersList(); updateUI(); renderTower();
