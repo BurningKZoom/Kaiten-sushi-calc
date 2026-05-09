@@ -371,13 +371,16 @@ function updateLobbyUI() {
         channel.presence.enter({ name: roomState.myName });
         channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
             if (!err && resultPage && resultPage.items.length > 0) {
+                // Find the MOST RECENT finalizeBill message to get current state
+                const finalizeMsg = resultPage.items.find(msg => msg.name === 'finalizeBill');
+                if (finalizeMsg) {
+                    roomState.isBillFinalized = finalizeMsg.data.isFinalized;
+                    roomState.hostId = finalizeMsg.data.hostId;
+                }
+
                 resultPage.items.forEach(msg => {
                     if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
                         if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
-                    }
-                    if (msg.name === 'finalizeBill') {
-                        roomState.isBillFinalized = true;
-                        roomState.hostId = msg.data.hostId;
                     }
                 });
                 updateUsersList(); updateUI(); renderTower();
