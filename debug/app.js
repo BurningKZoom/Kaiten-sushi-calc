@@ -323,20 +323,19 @@ function initAbly() {
 
         channel = tempChannel;
 
-        // AUTHORED RESTAURANT SYNC
+        // AUTHORED RESTAURANT SYNC (Mandatory for Joiners)
         const checkAutoMatch = (peerData, peerId) => {
             if (!peerData.isHost || peerId === roomState.myUserId) return;
             
             const currentRes = document.getElementById('restaurantSelect').value;
             const peerRes = peerData.restaurant;
-            
-            const myCurrentData = state.data[currentRes];
-            const hasPlates = Object.values(myCurrentData.counts).some(c => c > 0) || (myCurrentData.customItems && myCurrentData.customItems.length > 0);
 
-            if (peerRes && peerRes !== currentRes && !hasPlates) {
-                console.log("Matching Host Restaurant Selection Authority");
+            if (peerRes && peerRes !== currentRes) {
+                console.log(`[Authority Sync] Switching menu to match Host (${peerId}): ${peerRes}`);
                 document.getElementById('restaurantSelect').value = peerRes;
                 initApp(true);
+                // Immediately tell host I've switched to their menu
+                publishMyState();
             }
         };
 
