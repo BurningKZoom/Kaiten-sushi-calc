@@ -61,10 +61,9 @@ let state = {
 
 // --- LOBBY & SYNC FUNCTIONS ---
 
-    // --- HAPTIC FEEDBACK ---
 function triggerHaptic() {
     if ("vibrate" in navigator) {
-        navigator.vibrate(50); // Short 50ms vibration
+        navigator.vibrate(50);
     }
 }
 
@@ -143,7 +142,7 @@ function saveName() {
 function hostRoom() {
     const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
     roomState.hostId = roomState.myUserId; 
-    localStorage.setItem('sushi_hostId', roomState.hostId); // PERSIST HOST STATUS
+    localStorage.setItem('sushi_hostId', roomState.hostId);
     joinRoom(newRoomId);
     setTimeout(showQRCode, 300);
 }
@@ -153,7 +152,6 @@ function joinRoom(roomId) {
     roomState.roomId = roomId;
     localStorage.setItem('sushi_roomId', roomId);
     
-    // If I'm not the one who explicitly hosted this table, I'm a joiner
     if (localStorage.getItem('sushi_hostId') !== roomState.myUserId) {
         roomState.hostId = null;
         localStorage.removeItem('sushi_hostId');
@@ -194,7 +192,7 @@ function leaveRoom() {
     roomState.isBillFinalized = false;
     localStorage.removeItem('sushi_roomId');
     localStorage.removeItem('sushi_userName');
-    localStorage.removeItem('sushi_hostId'); // CLEAR HOST STATUS
+    localStorage.removeItem('sushi_hostId');
     
     const url = new URL(window.location);
     url.searchParams.delete('table');
@@ -232,7 +230,6 @@ function updateLobbyUI() {
         document.getElementById('roomIdDisplay').innerText = roomState.roomId;
         document.getElementById('tableBillSection').style.display = 'block';
         
-        // Show Finalize button ONLY for host
         const finalizeBtn = document.getElementById('finalizeBillBtn');
         if (roomState.hostId === roomState.myUserId) {
             finalizeBtn.style.display = 'block';
@@ -323,18 +320,20 @@ function initAbly() {
 
         channel = tempChannel;
 
-        // AUTHORED RESTAURANT SYNC (Mandatory for Joiners)
         const checkAutoMatch = (peerData, peerId) => {
             if (!peerData.isHost || peerId === roomState.myUserId) return;
             
             const currentRes = document.getElementById('restaurantSelect').value;
             const peerRes = peerData.restaurant;
+            
+            const myCurrentData = state.data[currentRes];
+            const hasPlates = Object.values(myCurrentData.counts).some(c => c > 0) || (myCurrentData.customItems && myCurrentData.customItems.length > 0);
 
-            if (peerRes && peerRes !== currentRes) {
-                console.log(`[Authority Sync] Switching menu to match Host (${peerId}): ${peerRes}`);
+            // Mandatory match if user is "fresh" OR on default katsu menu
+            if (peerRes && peerRes !== currentRes && (!hasPlates || currentRes === 'katsu')) {
+                console.log("[Sync] Authority Match Triggered");
                 document.getElementById('restaurantSelect').value = peerRes;
                 initApp(true);
-                // Immediately tell host I've switched to their menu
                 publishMyState();
             }
         };
@@ -407,9 +406,8 @@ function initAbly() {
 
 function updateUsersList() {
     let names = [];
-    // Me
-    const myName = roomState.myName + (roomState.hostId === roomState.myUserId ? " (Host/You)" : " (You)");
-    names.push(myName);
+    const myNameLabel = roomState.myName + (roomState.hostId === roomState.myUserId ? " (Host/You)" : " (You)");
+    names.push(myNameLabel);
 
     for (const [id, data] of Object.entries(roomState.peers)) {
         if (data.name) {
@@ -463,7 +461,6 @@ function updateTowerToggleUI() {
     }
 }
 
-// --- CORE CALCULATOR FUNCTIONS ---
 function formatBudget(input) {
     let value = input.value.replace(/,/g, '');
     if (value === '' || isNaN(value)) {
@@ -495,7 +492,7 @@ function loadData() {
     }
     state = loadedState;
     document.getElementById('restaurantSelect').value = state.lastActive;
-    document.getElementById('targetPrice').value = state.targetPrice;
+    document.getElementById('targetPrice').value = state.targetPrice || '';
     initApp(true);
     return true;
 }
@@ -542,10 +539,9 @@ function changeCount(id, delta, price) {
     const newCount = (currentData.counts[id] || 0) + delta;
     if (newCount < 0) return;
     
-    // Trigger Pop Animation on the count display
     const countEl = document.getElementById(`count-${id}`);
     countEl.classList.remove('pop-animation');
-    void countEl.offsetWidth; // Trigger reflow
+    void countEl.offsetWidth; 
     countEl.classList.add('pop-animation');
 
     triggerHaptic();
@@ -557,7 +553,7 @@ function changeCount(id, delta, price) {
     saveData();
 }
 
-    function renderTower() {
+function renderTower() {
     const type = document.getElementById('restaurantSelect').value;
     const tower = document.getElementById('plateTower');
     const summary = document.getElementById('towerSummary');
@@ -581,20 +577,16 @@ function changeCount(id, delta, price) {
     let totalViewPrice = 0;
     const plateData = restaurants[type];
 
-    // CALCULATE TOTAL VIEW PRICE (Plates + Custom Items)
-    // 1. Plates
     plateData.forEach(plate => {
         const count = combinedCounts[plate.id] || 0;
         totalViewPrice += (count * plate.price);
     });
 
-    // 2. Custom Items
     if (currentTowerView === 'personal') {
         state.data[type].customItems.forEach(item => {
             totalViewPrice += (item.price * item.qty);
         });
     } else {
-        // Table view: include everyone's custom items
         state.data[type].customItems.forEach(item => {
             totalViewPrice += (item.price * item.qty);
         });
@@ -612,10 +604,7 @@ function changeCount(id, delta, price) {
         if (count > 0) {
             totalCount += count;
             for (let i = 0; i < count; i++) { allPlates.push(plate.id); }
-            
-            // PERCENTAGE CALCULATION
             const percentage = totalViewPrice > 0 ? Math.round(((count * plate.price) / totalViewPrice) * 100) : 0;
-            
             const item = document.createElement('div');
             item.style.display = 'flex';
             item.style.alignItems = 'center';
@@ -731,7 +720,6 @@ function updateUI() {
     const total = subtotal + service;
     const target = getBudgetValue();
 
-    // --- Bill Finalization UI Logic ---
     const statusLabel = document.getElementById('billStatusLabel');
     if (roomState.isBillFinalized) {
         statusLabel.innerText = 'FINALIZED';
