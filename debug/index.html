@@ -31,6 +31,7 @@
         
         <div id="nameInputSection" style="display: none;">
             <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #666;">Enter your name to start syncing:</p>
+            <div id="inlineNameError" style="display: none; color: #e74c3c; font-size: 0.75rem; margin-bottom: 10px; font-weight: bold;"></div>
             <input type="text" id="userNameInput" placeholder="Your Name" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; width: 80%; max-width: 200px; text-align: center;">
             <div style="display: flex; gap: 5px; justify-content: center;">
                 <button onclick="saveName()" style="padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Continue</button>
@@ -171,13 +172,13 @@
         <div class="guide-item">
             <b>🍣 Non-Standard Price Plate</b>
             <p>Use this for items that don't match standard plate colors, such as special seasonal dishes or drinks.</p>
-            <img src="../assets/special-ex.png" class="guide-img" alt="Non-standard price example">
+            <img src="assets/special-ex.png" class="guide-img" alt="Non-standard price example">
         </div>
 
         <div class="guide-item" style="margin-bottom: 20px;">
             <b>🤝 Manual Split Plate</b>
             <p>Share high-priced plates with friends easily. Split a ฿150 plate by entering ฿50 each.</p>
-            <img src="../assets/split-ex.png" class="guide-img" alt="Split plate example">
+            <img src="assets/split-ex.png" class="guide-img" alt="Split plate example">
         </div>
 
         <button onclick="closeSpecialGuide()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">Got it!</button>

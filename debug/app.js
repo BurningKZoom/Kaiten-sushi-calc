@@ -109,6 +109,7 @@ function copyTableLink() {
 
 function showNameInput() {
     document.getElementById("lobbyError").style.display = "none";
+    document.getElementById("inlineNameError").style.display = "none";
     document.getElementById('startMultiplayerSection').style.display = 'none';
     document.getElementById('nameInputSection').style.display = 'block';
 }
