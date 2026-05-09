@@ -18,7 +18,7 @@ let roomState = {
     myUserId: localStorage.getItem('sushi_userId') || 'user_' + Math.random().toString(36).substr(2, 9),
     myName: localStorage.getItem('sushi_userName') || '',
     peers: {},
-    hostId: null,
+    hostId: localStorage.getItem('sushi_hostId') || null,
     isBillFinalized: false
 };
 localStorage.setItem('sushi_userId', roomState.myUserId);
@@ -143,6 +143,7 @@ function saveName() {
 function hostRoom() {
     const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
     roomState.hostId = roomState.myUserId; 
+    localStorage.setItem('sushi_hostId', roomState.hostId); // PERSIST HOST STATUS
     joinRoom(newRoomId);
     setTimeout(showQRCode, 300);
 }
@@ -152,9 +153,10 @@ function joinRoom(roomId) {
     roomState.roomId = roomId;
     localStorage.setItem('sushi_roomId', roomId);
     
-    // If I'm not already marked as host (from hostRoom), I'm a joiner
-    if (roomState.hostId !== roomState.myUserId) {
-        roomState.hostId = null; 
+    // If I'm not the one who explicitly hosted this table, I'm a joiner
+    if (localStorage.getItem('sushi_hostId') !== roomState.myUserId) {
+        roomState.hostId = null;
+        localStorage.removeItem('sushi_hostId');
     }
     
     const url = new URL(window.location);
@@ -192,6 +194,7 @@ function leaveRoom() {
     roomState.isBillFinalized = false;
     localStorage.removeItem('sushi_roomId');
     localStorage.removeItem('sushi_userName');
+    localStorage.removeItem('sushi_hostId'); // CLEAR HOST STATUS
     
     const url = new URL(window.location);
     url.searchParams.delete('table');
@@ -251,12 +254,11 @@ function updateLobbyUI() {
     }
 }
 
-                function initAbly() {
+function initAbly() {
     const errEl = document.getElementById('lobbyError');
     const inlineNameErrEl = document.getElementById('inlineNameError');
     const contBtn = document.getElementById('lobbyContinueBtn');
     
-    // Domain Lock Check
     if (!_auth.isAuthorized) {
         console.error("Unauthorized Domain: Sync Disabled.");
         if (errEl) {
@@ -307,15 +309,11 @@ function updateLobbyUI() {
         );
 
         if (nameTaken) {
-            // CRITICAL: Clear name but keep room so user is forced back to Name Input for the SAME room
             const takenName = roomState.myName;
             roomState.myName = '';
             localStorage.removeItem('sushi_userName');
-            
             updateLobbyUI();
             showNameInput();
-
-            // Set error AFTER UI reset (since showNameInput hides it)
             if (inlineNameErrEl) {
                 inlineNameErrEl.innerText = `Name "${takenName}" is already taken at this table!`;
                 inlineNameErrEl.style.display = 'block';
@@ -323,25 +321,20 @@ function updateLobbyUI() {
             return;
         }
 
-        // Host Determination: Oldest member (including me)
-        if (!roomState.hostId && members && members.length > 0) {
-            const sorted = members.sort((a, b) => a.timestamp - b.timestamp);
-            roomState.hostId = sorted[0].clientId;
-        } else if (!roomState.hostId) {
-            roomState.hostId = roomState.myUserId;
-        }
-
         channel = tempChannel;
 
-        // Helper for auto-matching restaurant
+        // AUTHORED RESTAURANT SYNC
         const checkAutoMatch = (peerData, peerId) => {
-            if (peerId !== roomState.hostId || peerId === roomState.myUserId) return;
+            if (!peerData.isHost || peerId === roomState.myUserId) return;
+            
             const currentRes = document.getElementById('restaurantSelect').value;
             const peerRes = peerData.restaurant;
+            
             const myCurrentData = state.data[currentRes];
             const hasPlates = Object.values(myCurrentData.counts).some(c => c > 0) || (myCurrentData.customItems && myCurrentData.customItems.length > 0);
 
             if (peerRes && peerRes !== currentRes && !hasPlates) {
+                console.log("Matching Host Restaurant Selection Authority");
                 document.getElementById('restaurantSelect').value = peerRes;
                 initApp(true);
             }
@@ -349,7 +342,10 @@ function updateLobbyUI() {
 
         channel.subscribe('syncState', (message) => {
             if (message.clientId !== roomState.myUserId) {
-                checkAutoMatch(message.data, message.clientId);
+                if (message.data.isHost) {
+                    roomState.hostId = message.clientId;
+                    checkAutoMatch(message.data, message.clientId);
+                }
                 roomState.peers[message.clientId] = { ...message.data, isOffline: false };
                 updateUsersList(); updateUI(); renderTower();
             }
@@ -385,28 +381,26 @@ function updateLobbyUI() {
 
         channel.presence.enter({ name: roomState.myName });
         
-        // Optimize: Publish state and show UI immediately
         publishMyState();
         updateLobbyUI();
 
-        // Fetch history in the background to avoid blocking
-        channel.history({ limit: 10, direction: 'backwards' }, (err, resultPage) => {
+        channel.history({ limit: 15, direction: 'backwards' }, (err, resultPage) => {
             if (!err && resultPage && resultPage.items.length > 0) {
-                const finalizeMsg = resultPage.items.find(msg => msg.name === 'finalizeBill');
-                if (finalizeMsg) {
-                    roomState.isBillFinalized = finalizeMsg.data.isFinalized;
-                    roomState.hostId = finalizeMsg.data.hostId;
-                }
-
                 resultPage.items.forEach(msg => {
+                    if (msg.name === 'finalizeBill' && !roomState.isBillFinalized) {
+                        roomState.isBillFinalized = msg.data.isFinalized;
+                        roomState.hostId = msg.data.hostId;
+                    }
                     if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
-                        if (!roomState.peers[msg.clientId]) {
-                            roomState.peers[msg.clientId] = msg.data;
+                        if (msg.data.isHost) {
+                            roomState.hostId = msg.clientId;
                             checkAutoMatch(msg.data, msg.clientId);
                         }
+                        if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
                     }
                 });
                 updateUsersList(); updateUI(); renderTower();
+                updateLobbyUI();
             }
         });
     });
@@ -428,7 +422,8 @@ function publishMyState() {
         name: roomState.myName,
         restaurant: type,
         counts: currentData.counts,
-        customItems: currentData.customItems
+        customItems: currentData.customItems,
+        isHost: (roomState.hostId === roomState.myUserId)
     });
 }
 
@@ -736,12 +731,12 @@ function updateUI() {
         statusLabel.innerText = 'FINALIZED';
         statusLabel.style.background = 'var(--orange)';
         document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = true);
-        document.querySelectorAll('input').forEach(input => input.disabled = true);
+        document.querySelectorAll('.budget-section input, .custom-input-group input').forEach(input => input.disabled = true);
     } else {
         statusLabel.innerText = 'LIVE';
         statusLabel.style.background = '#2ecc71';
         document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = false);
-        document.querySelectorAll('input').forEach(input => input.disabled = false);
+        document.querySelectorAll('.budget-section input, .custom-input-group input').forEach(input => input.disabled = false);
     }
 
     document.getElementById('subtotal').innerText = subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -843,11 +838,9 @@ function updateUI() {
         rankEl.innerText = rankText;
         rankEl.className = "rank-label " + rankClass;
 
-        // --- User Breakdown ---
         const breakdownContainer = document.getElementById('usersBreakdown');
         breakdownContainer.innerHTML = '<div style="font-size: 0.65rem; color: #aaa; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; text-align:center;">Who owes what:</div>';
         
-        // Add Me
         const myRow = document.createElement('div');
         myRow.className = 'row';
         myRow.style.fontSize = '0.85rem';
@@ -855,7 +848,6 @@ function updateUI() {
         myRow.innerHTML = `<span>${roomState.myName || 'Me'} (You)</span> <span>฿${total.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>`;
         breakdownContainer.appendChild(myRow);
         
-        // Add Peers
         for (const peer of Object.values(roomState.peers)) {
             if (peer.restaurant === type) {
                 let peerPlateSub = 0;
@@ -875,7 +867,6 @@ function updateUI() {
                 breakdownContainer.appendChild(pRow);
             }
         }
-
         document.getElementById('tableBillSection').style.display = 'block';
     } else {
         document.getElementById('tableBillSection').style.display = 'none';
