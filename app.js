@@ -168,6 +168,8 @@ function joinRoomFromInput() {
 
 function leaveRoom() {
     if (channel) {
+        // Notify others to remove me immediately
+        channel.publish('explicitLeave', { clientId: roomState.myUserId });
         channel.presence.leave();
         channel.detach();
     }
@@ -308,7 +310,7 @@ function updateLobbyUI() {
         });
 
         channel.presence.subscribe('leave', (member) => {
-            if (roomState.peers[member.clientId]) roomState.peers[member.clientId].isOffline = true;
+            delete roomState.peers[member.clientId];
             updateUsersList(); updateUI(); renderTower();
         });
 

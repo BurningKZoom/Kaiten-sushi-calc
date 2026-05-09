@@ -168,6 +168,8 @@ function joinRoomFromInput() {
 
 function leaveRoom() {
     if (channel) {
+        // Notify others to remove me immediately
+        channel.publish('explicitLeave', { clientId: roomState.myUserId });
         channel.presence.leave();
         channel.detach();
     }
