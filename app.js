@@ -17,7 +17,9 @@ let roomState = {
     roomId: null,
     myUserId: localStorage.getItem('sushi_userId') || 'user_' + Math.random().toString(36).substr(2, 9),
     myName: localStorage.getItem('sushi_userName') || '',
-    peers: {}
+    peers: {},
+    hostId: null,
+    isBillFinalized: false
 };
 localStorage.setItem('sushi_userId', roomState.myUserId);
 let currentTowerView = 'personal';
@@ -140,6 +142,7 @@ function saveName() {
 
 function hostRoom() {
     const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+    roomState.hostId = roomState.myUserId; // Set local host ID
     joinRoom(newRoomId);
     setTimeout(showQRCode, 300);
 }
@@ -167,15 +170,21 @@ function joinRoomFromInput() {
 }
 
 function leaveRoom() {
+    if (roomState.roomId && !roomState.isBillFinalized) {
+        if (!confirm("Are you sure? Your plates will be removed from the table total if you leave before the bill is finalized.")) {
+            return;
+        }
+    }
+
     if (channel) {
-        // Notify others to remove me immediately
-        channel.publish('explicitLeave', { clientId: roomState.myUserId });
         channel.presence.leave();
         channel.detach();
     }
     roomState.roomId = null;
     roomState.peers = {};
     roomState.myName = '';
+    roomState.hostId = null;
+    roomState.isBillFinalized = false;
     localStorage.removeItem('sushi_roomId');
     localStorage.removeItem('sushi_userName');
     
@@ -187,6 +196,13 @@ function leaveRoom() {
     updateTowerToggleUI();
     updateUI();
     renderTower();
+}
+
+function finalizeBill() {
+    if (!channel || roomState.hostId !== roomState.myUserId) return;
+    if (confirm("Finalize bill? This will lock counts for everyone at the table.")) {
+        channel.publish('finalizeBill', { hostId: roomState.myUserId });
+    }
 }
 
 function updateLobbyUI() {
@@ -204,6 +220,10 @@ function updateLobbyUI() {
         activeSection.style.display = 'block';
         document.getElementById('roomIdDisplay').innerText = roomState.roomId;
         document.getElementById('tableBillSection').style.display = 'block';
+        
+        // Show Finalize button ONLY for host
+        const finalizeBtn = document.getElementById('finalizeBillBtn');
+        finalizeBtn.style.display = (roomState.hostId === roomState.myUserId) ? 'block' : 'none';
     } else if (roomState.roomId && !roomState.myName) {
         nameSection.style.display = 'block';
         document.getElementById('tableBillSection').style.display = 'none';
@@ -289,12 +309,30 @@ function updateLobbyUI() {
             return;
         }
 
+        // Host Determination: Smallest clientId or first in presence is usually host, 
+        // but we'll use a specific message to announce host if needed. 
+        // For simplicity, first person in presence becomes host if no hostId set.
+        if (!roomState.hostId && members && members.length > 0) {
+            // Sort by timestamp to find the oldest member
+            const sorted = members.sort((a, b) => a.timestamp - b.timestamp);
+            roomState.hostId = sorted[0].clientId;
+        } else if (!roomState.hostId) {
+            roomState.hostId = roomState.myUserId;
+        }
+
         channel = tempChannel;
         channel.subscribe('syncState', (message) => {
             if (message.clientId !== roomState.myUserId) {
                 roomState.peers[message.clientId] = { ...message.data, isOffline: false };
                 updateUsersList(); updateUI(); renderTower();
             }
+        });
+
+        channel.subscribe('finalizeBill', (message) => {
+            roomState.isBillFinalized = true;
+            roomState.hostId = message.data.hostId;
+            updateUI();
+            updateLobbyUI();
         });
 
         channel.subscribe('explicitLeave', (message) => {
@@ -310,7 +348,14 @@ function updateLobbyUI() {
         });
 
         channel.presence.subscribe('leave', (member) => {
-            delete roomState.peers[member.clientId];
+            // If bill is finalized, we KEEP their data for the table total
+            if (roomState.isBillFinalized) {
+                if (roomState.peers[member.clientId]) {
+                    roomState.peers[member.clientId].isOffline = true;
+                }
+            } else {
+                delete roomState.peers[member.clientId];
+            }
             updateUsersList(); updateUI(); renderTower();
         });
 
@@ -321,11 +366,16 @@ function updateLobbyUI() {
                     if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
                         if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
                     }
+                    if (msg.name === 'finalizeBill') {
+                        roomState.isBillFinalized = true;
+                        roomState.hostId = msg.data.hostId;
+                    }
                 });
                 updateUsersList(); updateUI(); renderTower();
             }
         });
         publishMyState();
+        updateLobbyUI();
     });
 }
 
@@ -646,6 +696,20 @@ function updateUI() {
     const service = subtotal * 0.10;
     const total = subtotal + service;
     const target = getBudgetValue();
+
+    // --- Bill Finalization UI Logic ---
+    const statusLabel = document.getElementById('billStatusLabel');
+    if (roomState.isBillFinalized) {
+        statusLabel.innerText = 'FINALIZED';
+        statusLabel.style.background = 'var(--orange)';
+        document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = true);
+        document.querySelectorAll('input').forEach(input => input.disabled = true);
+    } else {
+        statusLabel.innerText = 'LIVE';
+        statusLabel.style.background = '#2ecc71';
+        document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = false);
+        document.querySelectorAll('input').forEach(input => input.disabled = false);
+    }
 
     document.getElementById('subtotal').innerText = subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
     document.getElementById('service').innerText = service.toLocaleString('en-US', {minimumFractionDigits: 2});

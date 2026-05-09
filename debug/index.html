@@ -52,8 +52,12 @@
         </div>
 
         <div id="activeRoomSection" style="display: none;">
-            <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 0.9rem; color: var(--accent);">Table ID: <span id="roomIdDisplay"></span></p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <p style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--accent);">Table ID: <span id="roomIdDisplay"></span></p>
+                <span id="billStatusLabel" style="font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; background: #2ecc71; color: white; font-weight: bold;">LIVE</span>
+            </div>
             <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0;">
+                <button id="finalizeBillBtn" onclick="finalizeBill()" style="padding: 8px 15px; background: var(--orange); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: none;">📝 Finalize Bill</button>
                 <button onclick="showQRCode()" style="padding: 8px 15px; background: var(--accent); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 5px;">
                     <span style="font-size: 1rem;">📱</span> Show QR
                 </button>
