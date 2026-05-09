@@ -332,6 +332,20 @@ function updateLobbyUI() {
         channel = tempChannel;
         channel.subscribe('syncState', (message) => {
             if (message.clientId !== roomState.myUserId) {
+                // AUTO-MATCH RESTAURANT LOGIC
+                const currentRes = document.getElementById('restaurantSelect').value;
+                const peerRes = message.data.restaurant;
+                
+                // If I just joined and have NO counts for the current restaurant, switch to match host
+                const myCurrentData = state.data[currentRes];
+                const hasPlates = Object.values(myCurrentData.counts).some(c => c > 0) || myCurrentData.customItems.length > 0;
+
+                if (peerRes && peerRes !== currentRes && !hasPlates) {
+                    console.log(`Auto-switching restaurant to match table: ${peerRes}`);
+                    document.getElementById('restaurantSelect').value = peerRes;
+                    initApp(true);
+                }
+
                 roomState.peers[message.clientId] = { ...message.data, isOffline: false };
                 updateUsersList(); updateUI(); renderTower();
             }
