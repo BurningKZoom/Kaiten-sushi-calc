@@ -52,12 +52,12 @@ The application manages state through two primary objects:
 ---
 
 ### D. Finalize Bill Workflow (Host Driven)
-1. **Host Action**: The user who created the table (Host) can click "Finalize Bill".
-2. **Broadcast**: A `finalizeBill` message is sent to all peers.
-3. **UI Freeze**: All participants' apps switch to `isBillFinalized: true`, which:
-    - Disables all plate count buttons (+/-).
-    - Disables custom item inputs and reset buttons.
-    - Updates the status label from "LIVE" to "FINALIZED".
+1. **Host Action**: The user who created the table (Host) can click "Finalize Bill" to lock counts, or "Un-finalize Bill" to unlock them.
+2. **Broadcast**: A `finalizeBill` message is sent to all peers containing the new `isFinalized` state.
+3. **UI Freeze/Unfreeze**: All participants' apps switch their `isBillFinalized` state, which:
+    - Disables/Enables all plate count buttons (+/-).
+    - Disables/Enables custom item inputs and reset buttons.
+    - Updates the status label between "LIVE" (green) and "FINALIZED" (orange).
 4. **Data Locking**: When the bill is finalized, the `presence.leave` listener is modified to KEEP peer data in the table total instead of deleting it.
 5. **Leave Warning**: Users are warned if they try to leave a table before the bill is finalized.
 
