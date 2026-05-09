@@ -407,9 +407,16 @@ function initAbly() {
 }
 
 function updateUsersList() {
-    let names = [roomState.myName + " (You)"];
+    let names = [];
+    // Me
+    const myName = roomState.myName + (roomState.hostId === roomState.myUserId ? " (Host/You)" : " (You)");
+    names.push(myName);
+
     for (const [id, data] of Object.entries(roomState.peers)) {
-        if (data.name) names.push(data.name);
+        if (data.name) {
+            const label = data.isHost ? `${data.name} (Host)` : data.name;
+            names.push(label);
+        }
     }
     document.getElementById('usersList').innerText = names.join(', ');
 }
