@@ -721,14 +721,17 @@ function updateUI() {
     const target = getBudgetValue();
 
     const statusLabel = document.getElementById('billStatusLabel');
+    const restaurantSelect = document.getElementById('restaurantSelect');
     if (roomState.isBillFinalized) {
         statusLabel.innerText = 'FINALIZED';
         statusLabel.style.background = 'var(--orange)';
+        if (restaurantSelect) restaurantSelect.disabled = true;
         document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = true);
         document.querySelectorAll('.budget-section input, .custom-input-group input').forEach(input => input.disabled = true);
     } else {
         statusLabel.innerText = 'LIVE';
         statusLabel.style.background = '#2ecc71';
+        if (restaurantSelect) restaurantSelect.disabled = false;
         document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = false);
         document.querySelectorAll('.budget-section input, .custom-input-group input').forEach(input => input.disabled = false);
     }
