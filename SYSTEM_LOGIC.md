@@ -57,6 +57,7 @@ The application manages state through two primary objects:
 3. **UI Freeze/Unfreeze**: All participants' apps switch their `isBillFinalized` state, which:
     - Disables/Enables all plate count buttons (+/-).
     - Disables/Enables custom item inputs and reset buttons.
+    - Disables/Enables the restaurant selector so the finalized bill cannot switch pricing presets.
     - Updates the status label between "LIVE" (green) and "FINALIZED" (orange).
 4. **Data Locking**: When the bill is finalized, the `presence.leave` listener is modified to KEEP peer data in the table total instead of deleting it.
 5. **Leave Warning**: Users are warned if they try to leave a table before the bill is finalized.
@@ -74,6 +75,7 @@ The application manages state through two primary objects:
 
 | Date | Change | Reason |
 | :--- | :--- | :--- |
+| 2026-05-14 | **Finalize Locks Restaurant Selector** | Prevents finalized bills from switching pricing presets after totals are locked. |
 | 2026-05-10 | **Auto-Match Restaurant** | Users joining a table automatically switch to the host's restaurant selection if they haven't started their own bill. |
 | 2026-05-10 | **Edit Bill Toggle** | Fixed bug where "Un-finalize" wasn't syncing. Renamed button to "Edit Bill" for better UX. |
 | 2026-05-10 | **Finalize Bill Workflow** | Implemented Option 1: Host can lock the table, freezing all inputs and ensuring data persists for the final check. |
