@@ -405,6 +405,22 @@ function applyBillSnapshot(snapshot) {
     }
 }
 
+function applySyncStateMessage(message, activeClientIds, checkAutoMatch) {
+    if (message.clientId === roomState.myUserId) {
+        if (message.data.isHost) claimHost(roomState.roomId);
+        return;
+    }
+
+    if (message.data.isHost) {
+        applyHostId(message.clientId);
+        checkAutoMatch(message.data, message.clientId);
+    }
+    roomState.peers[message.clientId] = clonePeerData(message.data, {
+        isOffline: activeClientIds ? !activeClientIds.has(message.clientId) : false,
+        hasLeft: false
+    });
+}
+
 function updateLobbyUI() {
     const startSection = document.getElementById('startMultiplayerSection');
     const nameSection = document.getElementById('nameInputSection');
@@ -534,11 +550,7 @@ function initAbly() {
         channel.subscribe('syncState', (message) => {
             if (roomState.isBillFinalized) return;
             if (message.clientId !== roomState.myUserId) {
-                if (message.data.isHost) {
-                    applyHostId(message.clientId);
-                    checkAutoMatch(message.data, message.clientId);
-                }
-                roomState.peers[message.clientId] = clonePeerData(message.data, { isOffline: false, hasLeft: false });
+                applySyncStateMessage(message, null, checkAutoMatch);
                 updateUsersList(); updateUI(); renderTower();
             }
         });
@@ -593,30 +605,30 @@ function initAbly() {
 
         channel.history({ limit: 15, direction: 'backwards' }, (err, resultPage) => {
             if (!err && resultPage && resultPage.items.length > 0) {
-                [...resultPage.items].reverse().forEach(msg => {
-                    if (msg.name === 'billSnapshot') {
-                        applyBillSnapshot(msg.data);
-                    }
+                const historyItems = [...resultPage.items].reverse();
+                let latestBillSnapshot = null;
+                let latestFinalizedState = roomState.isBillFinalized;
+
+                historyItems.forEach(msg => {
                     if (msg.name === 'finalizeBill') {
-                        roomState.isBillFinalized = msg.data.isFinalized;
-                        if (!msg.data.isFinalized) {
-                            roomState.finalizedSnapshot = null;
-                        }
+                        latestFinalizedState = !!msg.data.isFinalized;
                         applyHostId(msg.data.hostId);
                     }
+                    if (msg.name === 'billSnapshot' && msg.data && msg.data.roomId === roomState.roomId) {
+                        latestBillSnapshot = msg.data;
+                        applyHostId(msg.data.hostId, msg.data.roomId);
+                    }
+                });
+
+                roomState.isBillFinalized = latestFinalizedState;
+                roomState.finalizedSnapshot = null;
+                if (roomState.isBillFinalized && latestBillSnapshot) {
+                    applyBillSnapshot(latestBillSnapshot);
+                }
+
+                historyItems.forEach(msg => {
                     if (msg.name === 'syncState' && !roomState.isBillFinalized) {
-                        if (msg.clientId === roomState.myUserId) {
-                            if (msg.data.isHost) claimHost(roomState.roomId);
-                        } else {
-                            if (msg.data.isHost) {
-                                applyHostId(msg.clientId);
-                                checkAutoMatch(msg.data, msg.clientId);
-                            }
-                            roomState.peers[msg.clientId] = clonePeerData(msg.data, {
-                                isOffline: !activeClientIds.has(msg.clientId),
-                                hasLeft: false
-                            });
-                        }
+                        applySyncStateMessage(msg, activeClientIds, checkAutoMatch);
                     }
                     if (msg.name === 'explicitLeave') {
                         applyExplicitLeave(msg.clientId, msg.data || {});
