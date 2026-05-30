@@ -182,8 +182,15 @@ function leaveRoom() {
     }
 
     if (channel) {
-        channel.presence.leave();
-        channel.detach();
+        const leavingChannel = channel;
+        const wasFinalized = roomState.isBillFinalized;
+        leavingChannel.publish('explicitLeave', {
+            isFinalized: wasFinalized,
+            leftAt: Date.now()
+        }, () => {
+            leavingChannel.presence.leave();
+            leavingChannel.detach();
+        });
     }
     roomState.roomId = null;
     roomState.peers = {};
@@ -211,6 +218,83 @@ function finalizeBill() {
     
     if (confirm(actionText)) {
         channel.publish('finalizeBill', { hostId: roomState.myUserId, isFinalized: newState });
+        if (newState) {
+            channel.publish('billSnapshot', buildBillSnapshot(newState));
+        }
+    }
+}
+
+function clonePeerData(peerData, overrides = {}) {
+    const peer = peerData || {};
+    return {
+        ...peer,
+        counts: { ...(peer.counts || {}) },
+        customItems: (peer.customItems || []).map(item => ({ ...item })),
+        isOffline: !!peer.isOffline,
+        hasLeft: !!peer.hasLeft,
+        ...overrides
+    };
+}
+
+function getMyPeerData() {
+    const type = document.getElementById('restaurantSelect').value;
+    const currentData = state.data[type] || { counts: {}, customItems: [] };
+    return clonePeerData({
+        name: roomState.myName,
+        restaurant: type,
+        counts: currentData.counts,
+        customItems: currentData.customItems,
+        isHost: (roomState.hostId === roomState.myUserId)
+    }, { isOffline: false, hasLeft: false });
+}
+
+function buildBillSnapshot(isFinalized) {
+    const type = document.getElementById('restaurantSelect').value;
+    const peers = {
+        [roomState.myUserId]: getMyPeerData()
+    };
+
+    for (const [id, peer] of Object.entries(roomState.peers)) {
+        peers[id] = clonePeerData(peer);
+    }
+
+    return {
+        roomId: roomState.roomId,
+        hostId: roomState.hostId || roomState.myUserId,
+        restaurant: type,
+        isFinalized,
+        finalizedAt: Date.now(),
+        peers
+    };
+}
+
+function markPeerOffline(clientId, hasLeft = false) {
+    if (clientId === roomState.myUserId) return;
+    if (roomState.peers[clientId]) {
+        roomState.peers[clientId].isOffline = true;
+        if (hasLeft) roomState.peers[clientId].hasLeft = true;
+    }
+}
+
+function applyExplicitLeave(clientId, data = {}) {
+    if (clientId === roomState.myUserId) return;
+    if (roomState.isBillFinalized || data.isFinalized) {
+        markPeerOffline(clientId, true);
+    } else {
+        delete roomState.peers[clientId];
+    }
+}
+
+function applyBillSnapshot(snapshot) {
+    if (!snapshot || snapshot.roomId !== roomState.roomId || !snapshot.peers) return;
+
+    roomState.isBillFinalized = !!snapshot.isFinalized;
+    if (snapshot.hostId) roomState.hostId = snapshot.hostId;
+
+    for (const [id, peer] of Object.entries(snapshot.peers)) {
+        if (id !== roomState.myUserId) {
+            roomState.peers[id] = clonePeerData(peer);
+        }
     }
 }
 
@@ -318,6 +402,7 @@ function initAbly() {
             return;
         }
 
+        const activeClientIds = new Set((members || []).map(member => member.clientId));
         channel = tempChannel;
 
         const checkAutoMatch = (peerData, peerId) => {
@@ -344,7 +429,7 @@ function initAbly() {
                     roomState.hostId = message.clientId;
                     checkAutoMatch(message.data, message.clientId);
                 }
-                roomState.peers[message.clientId] = { ...message.data, isOffline: false };
+                roomState.peers[message.clientId] = clonePeerData(message.data, { isOffline: false, hasLeft: false });
                 updateUsersList(); updateUI(); renderTower();
             }
         });
@@ -356,24 +441,31 @@ function initAbly() {
             updateLobbyUI();
         });
 
+        channel.subscribe('billSnapshot', (message) => {
+            applyBillSnapshot(message.data);
+            updateUsersList(); updateUI(); renderTower();
+            updateLobbyUI();
+        });
+
         channel.subscribe('explicitLeave', (message) => {
             if (message.clientId !== roomState.myUserId) {
-                delete roomState.peers[message.clientId];
+                applyExplicitLeave(message.clientId, message.data || {});
                 updateUsersList(); updateUI(); renderTower();
             }
         });
 
         channel.presence.subscribe('enter', (member) => {
-            if (roomState.peers[member.clientId]) roomState.peers[member.clientId].isOffline = false;
+            activeClientIds.add(member.clientId);
+            if (roomState.peers[member.clientId]) {
+                roomState.peers[member.clientId].isOffline = false;
+                roomState.peers[member.clientId].hasLeft = false;
+            }
             if (member.clientId !== roomState.myUserId) publishMyState();
         });
 
         channel.presence.subscribe('leave', (member) => {
-            if (roomState.isBillFinalized) {
-                if (roomState.peers[member.clientId]) roomState.peers[member.clientId].isOffline = true;
-            } else {
-                delete roomState.peers[member.clientId];
-            }
+            activeClientIds.delete(member.clientId);
+            markPeerOffline(member.clientId);
             updateUsersList(); updateUI(); renderTower();
         });
 
@@ -384,8 +476,11 @@ function initAbly() {
 
         channel.history({ limit: 15, direction: 'backwards' }, (err, resultPage) => {
             if (!err && resultPage && resultPage.items.length > 0) {
-                resultPage.items.forEach(msg => {
-                    if (msg.name === 'finalizeBill' && !roomState.isBillFinalized) {
+                [...resultPage.items].reverse().forEach(msg => {
+                    if (msg.name === 'billSnapshot') {
+                        applyBillSnapshot(msg.data);
+                    }
+                    if (msg.name === 'finalizeBill') {
                         roomState.isBillFinalized = msg.data.isFinalized;
                         roomState.hostId = msg.data.hostId;
                     }
@@ -394,9 +489,23 @@ function initAbly() {
                             roomState.hostId = msg.clientId;
                             checkAutoMatch(msg.data, msg.clientId);
                         }
-                        if (!roomState.peers[msg.clientId]) roomState.peers[msg.clientId] = msg.data;
+                        roomState.peers[msg.clientId] = clonePeerData(msg.data, {
+                            isOffline: !activeClientIds.has(msg.clientId),
+                            hasLeft: false
+                        });
+                    }
+                    if (msg.name === 'explicitLeave') {
+                        applyExplicitLeave(msg.clientId, msg.data || {});
                     }
                 });
+                for (const [id, peer] of Object.entries(roomState.peers)) {
+                    if (activeClientIds.has(id)) {
+                        peer.isOffline = false;
+                        peer.hasLeft = false;
+                    } else if (!peer.hasLeft) {
+                        peer.isOffline = true;
+                    }
+                }
                 updateUsersList(); updateUI(); renderTower();
                 updateLobbyUI();
             }
@@ -411,7 +520,11 @@ function updateUsersList() {
 
     for (const [id, data] of Object.entries(roomState.peers)) {
         if (data.name) {
-            const label = data.isHost ? `${data.name} (Host)` : data.name;
+            const tags = [];
+            if (data.isHost) tags.push('Host');
+            if (data.hasLeft) tags.push('left');
+            else if (data.isOffline) tags.push('offline');
+            const label = tags.length ? `${data.name} (${tags.join(', ')})` : data.name;
             names.push(label);
         }
     }
@@ -721,14 +834,17 @@ function updateUI() {
     const target = getBudgetValue();
 
     const statusLabel = document.getElementById('billStatusLabel');
+    const restaurantSelect = document.getElementById('restaurantSelect');
     if (roomState.isBillFinalized) {
         statusLabel.innerText = 'FINALIZED';
         statusLabel.style.background = 'var(--orange)';
+        if (restaurantSelect) restaurantSelect.disabled = true;
         document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = true);
         document.querySelectorAll('.budget-section input, .custom-input-group input').forEach(input => input.disabled = true);
     } else {
         statusLabel.innerText = 'LIVE';
         statusLabel.style.background = '#2ecc71';
+        if (restaurantSelect) restaurantSelect.disabled = false;
         document.querySelectorAll('.ctrl-btn, .btn-add-custom, .btn-remove-custom, .btn-reset').forEach(btn => btn.disabled = false);
         document.querySelectorAll('.budget-section input, .custom-input-group input').forEach(input => input.disabled = false);
     }

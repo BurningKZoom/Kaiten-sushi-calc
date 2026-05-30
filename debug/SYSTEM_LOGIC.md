@@ -18,6 +18,11 @@ The application manages state through two primary objects:
     - `sushi_roomId`: Current joined table (cleared on leave).
     - `sushi_calc_v2`: Full calculation state (plates, budget, etc.).
 - **Session Expiry**: Local data is cleared if the `timestamp` in `sushi_calc_v2` is older than 6 hours.
+- **Ably Messages**:
+    - `syncState`: Live per-user bill state.
+    - `finalizeBill`: Host-driven finalized/editable flag.
+    - `billSnapshot`: Full finalized table snapshot for best-effort recovery through Ably history/persist-last.
+    - Ably history is not treated as a primary database; recovery depends on the channel's configured retention/persistence.
 
 ---
 
@@ -39,11 +44,18 @@ The application manages state through two primary objects:
 3. **Presence Check**: Verifies if the chosen `myName` is already taken by an active member in the channel.
 4. **Subscribers**:
     - `syncState`: Updates `roomState.peers` with remote plate data.
-    - `explicitLeave`: Immediately deletes a peer when they click "Leave".
-    - `presence.leave`: Deletes a peer from the local list.
+    - `billSnapshot`: Applies a finalized table snapshot when available from live messages or history.
+    - `explicitLeave`: Deletes a peer only before finalization; after finalization, marks them as left while preserving bill data.
+    - `presence.leave`: Marks a peer offline; it does not delete bill data because phone lock/backgrounding can trigger presence leave.
 5. **Initial Sync**: Publishes the local user's state to all other peers.
 
-### C. The Calculation Engine (`updateUI`)
+### C. Presence vs Bill Membership
+1. **Presence Is Connection Status**: Ably Presence only says whether a client is currently connected. It must not be used as the source of truth for table bill membership.
+2. **Phone Lock / Backgrounding**: If a phone locks, sleeps, backgrounds, or drops network, other users keep that person's latest bill data and show them as offline.
+3. **Explicit Leave Before Finalization**: If a user taps "Leave" before the bill is finalized, their data is removed from active table totals.
+4. **Explicit Leave After Finalization**: If a user taps "Leave" after finalization, their data remains in the finalized bill and they are shown as left/offline.
+
+### D. The Calculation Engine (`updateUI`)
 1. **Personal Totals**: Calculates Subtotal + 10% Service Charge for the current user.
 2. **Budget Tracking**: Updates the progress bar and "Remaining" text if a budget is set.
 3. **Table Totals**: (If in a room) Iterates through all peers in `roomState.peers` to calculate the collective total and user-by-user breakdown.
@@ -51,18 +63,18 @@ The application manages state through two primary objects:
 
 ---
 
-### D. Finalize Bill Workflow (Host Driven)
+### E. Finalize Bill Workflow (Host Driven)
 1. **Host Action**: The user who created the table (Host) can click "Finalize Bill" to lock counts, or "Edit Bill" to unlock them.
-2. **Broadcast**: A `finalizeBill` message is sent to all peers containing the new `isFinalized` state.
+2. **Broadcast**: A `finalizeBill` message is sent to all peers containing the new `isFinalized` state. When finalizing, the host also publishes a full `billSnapshot`.
 3. **UI Freeze/Unfreeze**: All participants' apps switch their `isBillFinalized` state, which:
     - Disables/Enables all plate count buttons (+/-).
     - Disables/Enables custom item inputs and reset buttons.
     - Disables/Enables the restaurant selector so the finalized bill cannot switch pricing presets.
     - Updates the status label between "LIVE" (green) and "FINALIZED" (orange).
-4. **Data Locking**: When the bill is finalized, the `presence.leave` listener is modified to KEEP peer data in the table total instead of deleting it.
-5. **Leave Warning**: Users are warned if they try to leave a table before the bill is finalized.
+4. **Data Locking**: When the bill is finalized, all recorded peer data stays in the table total even if a user locks their phone, disconnects, closes the tab, or taps Leave.
+5. **Leave Warning**: Users are warned if they try to leave a table before the bill is finalized, because explicit Leave before finalization removes their data.
 
-### E. Auto-Match Restaurant Workflow (Host Authority)
+### F. Auto-Match Restaurant Workflow (Host Authority)
 1. **Join Event**: When a user joins a table, the app listens for the first `syncState` message from the **Host** (`roomState.hostId`).
 2. **State Check**: The joining user checks if they have zero plates and zero custom items.
 3. **Auto-Switch**: If the user is "clean" (no data yet), they automatically switch their `restaurantSelect` dropdown to match the **Host's** selection.
@@ -76,6 +88,7 @@ The application manages state through two primary objects:
 | Date | Change | Reason |
 | :--- | :--- | :--- |
 | 2026-05-14 | **Finalize Locks Restaurant Selector** | Prevents finalized bills from switching pricing presets after totals are locked. |
+| 2026-05-30 | **Presence Disconnect Preservation** | Phone lock/background disconnect now marks peers offline instead of removing them; explicit Leave removes only before finalization, and finalized bills publish a best-effort `billSnapshot`. |
 | 2026-05-10 | **Auto-Match Restaurant** | Users joining a table automatically switch to the host's restaurant selection if they haven't started their own bill. |
 | 2026-05-10 | **Edit Bill Toggle** | Fixed bug where "Un-finalize" wasn't syncing. Renamed button to "Edit Bill" for better UX. |
 | 2026-05-10 | **Finalize Bill Workflow** | Implemented Option 1: Host can lock the table, freezing all inputs and ensuring data persists for the final check. |
@@ -91,4 +104,6 @@ The application manages state through two primary objects:
 1. **UI Updates**: Always call `updateLobbyUI()` and `updateTowerToggleUI()` before room joining logic.
 2. **Name Collisions**: If name is taken, clear `roomState.myName`, keep `roomState.roomId`, and call `showNameInput()`.
 3. **Error Messaging**: Name entry errors must target `inlineNameError` and be set *after* `showNameInput()` is called.
-4. **Leaving**: `leaveRoom` must detach from Ably and clear room state, but leave calculation `state` intact.
+4. **Presence**: Treat `presence.leave` as offline status only; never delete peer bill data from presence alone.
+5. **Leaving**: `leaveRoom` must publish `explicitLeave`, detach from Ably, and clear local room state, but leave calculation `state` intact.
+6. **Finalized Bills**: Once finalized, all users' recorded plates/custom items remain in table totals even when users disconnect or leave. Ably recovery is best-effort unless channel persistence/history retention is configured.
