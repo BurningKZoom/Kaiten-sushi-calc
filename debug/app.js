@@ -19,6 +19,7 @@ let roomState = {
     myName: localStorage.getItem('sushi_userName') || '',
     peers: {},
     hostId: localStorage.getItem('sushi_hostId') || null,
+    hostRoomId: localStorage.getItem('sushi_hostRoomId') || null,
     isBillFinalized: false
 };
 localStorage.setItem('sushi_userId', roomState.myUserId);
@@ -139,22 +140,70 @@ function saveName() {
     }
 }
 
+function claimHost(roomId) {
+    roomState.hostId = roomState.myUserId;
+    roomState.hostRoomId = roomId;
+    localStorage.setItem('sushi_hostId', roomState.myUserId);
+    localStorage.setItem('sushi_hostRoomId', roomId);
+}
+
+function clearHostClaim() {
+    roomState.hostId = null;
+    roomState.hostRoomId = null;
+    localStorage.removeItem('sushi_hostId');
+    localStorage.removeItem('sushi_hostRoomId');
+}
+
+function restoreLocalHostClaim(roomId, previousRoomId = localStorage.getItem('sushi_roomId')) {
+    const storedHostId = localStorage.getItem('sushi_hostId');
+    const storedHostRoomId = localStorage.getItem('sushi_hostRoomId');
+    const canMigrateLegacyClaim = !storedHostRoomId && previousRoomId === roomId;
+
+    if (storedHostId === roomState.myUserId && (storedHostRoomId === roomId || canMigrateLegacyClaim)) {
+        claimHost(roomId);
+        return true;
+    }
+    return false;
+}
+
+function clearStaleHostClaim(roomId) {
+    const storedHostId = localStorage.getItem('sushi_hostId');
+    const storedHostRoomId = localStorage.getItem('sushi_hostRoomId');
+
+    if (storedHostId && (storedHostId !== roomState.myUserId || storedHostRoomId !== roomId)) {
+        clearHostClaim();
+    }
+}
+
+function isCurrentUserHost() {
+    return !!roomState.roomId && roomState.hostId === roomState.myUserId && roomState.hostRoomId === roomState.roomId;
+}
+
+function applyHostId(hostId, roomId = roomState.roomId) {
+    if (!hostId) return;
+    if (hostId === roomState.myUserId) {
+        claimHost(roomId);
+    } else {
+        roomState.hostId = hostId;
+    }
+}
+
 function hostRoom() {
     const newRoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
-    roomState.hostId = roomState.myUserId; 
-    localStorage.setItem('sushi_hostId', roomState.hostId);
+    claimHost(newRoomId);
     joinRoom(newRoomId);
     setTimeout(showQRCode, 300);
 }
 
 function joinRoom(roomId) {
     document.getElementById("lobbyError").style.display = "none";
+    const previousRoomId = localStorage.getItem('sushi_roomId');
     roomState.roomId = roomId;
     localStorage.setItem('sushi_roomId', roomId);
     
-    if (localStorage.getItem('sushi_hostId') !== roomState.myUserId) {
+    if (!restoreLocalHostClaim(roomId, previousRoomId)) {
+        clearStaleHostClaim(roomId);
         roomState.hostId = null;
-        localStorage.removeItem('sushi_hostId');
     }
     
     const url = new URL(window.location);
@@ -195,11 +244,10 @@ function leaveRoom() {
     roomState.roomId = null;
     roomState.peers = {};
     roomState.myName = '';
-    roomState.hostId = null;
+    clearHostClaim();
     roomState.isBillFinalized = false;
     localStorage.removeItem('sushi_roomId');
     localStorage.removeItem('sushi_userName');
-    localStorage.removeItem('sushi_hostId');
     
     const url = new URL(window.location);
     url.searchParams.delete('table');
@@ -212,7 +260,7 @@ function leaveRoom() {
 }
 
 function finalizeBill() {
-    if (!channel || roomState.hostId !== roomState.myUserId) return;
+    if (!channel || !isCurrentUserHost()) return;
     const newState = !roomState.isBillFinalized;
     const actionText = newState ? "Finalize bill? This will lock counts for everyone." : "Allow everyone to edit counts again?";
     
@@ -244,7 +292,7 @@ function getMyPeerData() {
         restaurant: type,
         counts: currentData.counts,
         customItems: currentData.customItems,
-        isHost: (roomState.hostId === roomState.myUserId)
+        isHost: isCurrentUserHost()
     }, { isOffline: false, hasLeft: false });
 }
 
@@ -260,7 +308,7 @@ function buildBillSnapshot(isFinalized) {
 
     return {
         roomId: roomState.roomId,
-        hostId: roomState.hostId || roomState.myUserId,
+        hostId: isCurrentUserHost() ? roomState.myUserId : roomState.hostId,
         restaurant: type,
         isFinalized,
         finalizedAt: Date.now(),
@@ -289,7 +337,7 @@ function applyBillSnapshot(snapshot) {
     if (!snapshot || snapshot.roomId !== roomState.roomId || !snapshot.peers) return;
 
     roomState.isBillFinalized = !!snapshot.isFinalized;
-    if (snapshot.hostId) roomState.hostId = snapshot.hostId;
+    applyHostId(snapshot.hostId, snapshot.roomId);
 
     for (const [id, peer] of Object.entries(snapshot.peers)) {
         if (id !== roomState.myUserId) {
@@ -315,7 +363,7 @@ function updateLobbyUI() {
         document.getElementById('tableBillSection').style.display = 'block';
         
         const finalizeBtn = document.getElementById('finalizeBillBtn');
-        if (roomState.hostId === roomState.myUserId) {
+        if (isCurrentUserHost()) {
             finalizeBtn.style.display = 'block';
             finalizeBtn.innerText = roomState.isBillFinalized ? '✏️ Edit Bill' : '📝 Finalize Bill';
             finalizeBtn.style.background = roomState.isBillFinalized ? '#3498db' : 'var(--orange)';
@@ -426,7 +474,7 @@ function initAbly() {
         channel.subscribe('syncState', (message) => {
             if (message.clientId !== roomState.myUserId) {
                 if (message.data.isHost) {
-                    roomState.hostId = message.clientId;
+                    applyHostId(message.clientId);
                     checkAutoMatch(message.data, message.clientId);
                 }
                 roomState.peers[message.clientId] = clonePeerData(message.data, { isOffline: false, hasLeft: false });
@@ -436,7 +484,7 @@ function initAbly() {
 
         channel.subscribe('finalizeBill', (message) => {
             roomState.isBillFinalized = message.data.isFinalized;
-            roomState.hostId = message.data.hostId;
+            applyHostId(message.data.hostId);
             updateUI();
             updateLobbyUI();
         });
@@ -482,22 +530,27 @@ function initAbly() {
                     }
                     if (msg.name === 'finalizeBill') {
                         roomState.isBillFinalized = msg.data.isFinalized;
-                        roomState.hostId = msg.data.hostId;
+                        applyHostId(msg.data.hostId);
                     }
-                    if (msg.name === 'syncState' && msg.clientId !== roomState.myUserId) {
-                        if (msg.data.isHost) {
-                            roomState.hostId = msg.clientId;
-                            checkAutoMatch(msg.data, msg.clientId);
+                    if (msg.name === 'syncState') {
+                        if (msg.clientId === roomState.myUserId) {
+                            if (msg.data.isHost) claimHost(roomState.roomId);
+                        } else {
+                            if (msg.data.isHost) {
+                                applyHostId(msg.clientId);
+                                checkAutoMatch(msg.data, msg.clientId);
+                            }
+                            roomState.peers[msg.clientId] = clonePeerData(msg.data, {
+                                isOffline: !activeClientIds.has(msg.clientId),
+                                hasLeft: false
+                            });
                         }
-                        roomState.peers[msg.clientId] = clonePeerData(msg.data, {
-                            isOffline: !activeClientIds.has(msg.clientId),
-                            hasLeft: false
-                        });
                     }
                     if (msg.name === 'explicitLeave') {
                         applyExplicitLeave(msg.clientId, msg.data || {});
                     }
                 });
+                restoreLocalHostClaim(roomState.roomId);
                 for (const [id, peer] of Object.entries(roomState.peers)) {
                     if (activeClientIds.has(id)) {
                         peer.isOffline = false;
@@ -515,7 +568,7 @@ function initAbly() {
 
 function updateUsersList() {
     let names = [];
-    const myNameLabel = roomState.myName + (roomState.hostId === roomState.myUserId ? " (Host/You)" : " (You)");
+    const myNameLabel = roomState.myName + (isCurrentUserHost() ? " (Host/You)" : " (You)");
     names.push(myNameLabel);
 
     for (const [id, data] of Object.entries(roomState.peers)) {
@@ -540,7 +593,7 @@ function publishMyState() {
         restaurant: type,
         counts: currentData.counts,
         customItems: currentData.customItems,
-        isHost: (roomState.hostId === roomState.myUserId)
+        isHost: isCurrentUserHost()
     });
 }
 
