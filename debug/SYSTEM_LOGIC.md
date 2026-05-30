@@ -21,9 +21,9 @@ The application manages state through two primary objects:
     - `sushi_calc_v2`: Full calculation state (plates, budget, etc.).
 - **Session Expiry**: Local data is cleared if the `timestamp` in `sushi_calc_v2` is older than 6 hours.
 - **Ably Messages**:
-    - `syncState`: Live per-user bill state.
+    - `syncState`: Live per-user bill state. It is ignored while a bill is finalized.
     - `finalizeBill`: Host-driven finalized/editable flag.
-    - `billSnapshot`: Full finalized table snapshot for best-effort recovery through Ably history/persist-last.
+    - `billSnapshot`: Full finalized table snapshot. It is authoritative only while the bill is finalized.
     - Ably history is not treated as a primary database; recovery depends on the channel's configured retention/persistence.
 
 ---
@@ -45,11 +45,11 @@ The application manages state through two primary objects:
 2. **Connection**: Initializes Ably Realtime and attaches to a channel named `test:[roomId]`.
 3. **Presence Check**: Verifies if the chosen `myName` is already taken by an active member in the channel.
 4. **Subscribers**:
-    - `syncState`: Updates `roomState.peers` with remote plate data.
-    - `billSnapshot`: Applies a finalized table snapshot when available from live messages or history.
+    - `syncState`: Updates `roomState.peers` with remote plate data only while the bill is live/editable.
+    - `billSnapshot`: Applies a finalized table snapshot when available from live messages, active peers, or history.
     - `explicitLeave`: Deletes a peer only before finalization; after finalization, marks them as left while preserving bill data.
     - `presence.leave`: Marks a peer offline; it does not delete bill data because phone lock/backgrounding can trigger presence leave.
-5. **Initial Sync**: Publishes the local user's state to all other peers.
+5. **Initial Sync**: Publishes the local user's state only after history/snapshot recovery and only if the bill is not finalized.
 
 ### C. Host Ownership & Refresh Recovery
 1. **Host Claim**: `hostRoom()` stores both `sushi_hostId` and `sushi_hostRoomId`. Host status is valid only when both match the current user and room.
@@ -63,6 +63,8 @@ The application manages state through two primary objects:
 2. **Phone Lock / Backgrounding**: If a phone locks, sleeps, backgrounds, or drops network, other users keep that person's latest bill data and show them as offline.
 3. **Explicit Leave Before Finalization**: If a user taps "Leave" before the bill is finalized, their data is removed from active table totals.
 4. **Explicit Leave After Finalization**: If a user taps "Leave" after finalization, their data remains in the finalized bill and they are shown as left/offline.
+5. **Rejoin Before Finalization**: If a user leaves before finalization, edits locally, and rejoins, their current local bill syncs back into the live table.
+6. **Rejoin After Finalization**: If a user leaves after finalization, edits locally, and rejoins, the table bill stays unchanged and their local screen is restored from the finalized snapshot.
 
 ### E. The Calculation Engine (`updateUI`)
 1. **Personal Totals**: Calculates Subtotal + 10% Service Charge for the current user.
@@ -80,8 +82,12 @@ The application manages state through two primary objects:
     - Disables/Enables custom item inputs and reset buttons.
     - Disables/Enables the restaurant selector so the finalized bill cannot switch pricing presets.
     - Updates the status label between "LIVE" (green) and "FINALIZED" (orange).
-4. **Data Locking**: When the bill is finalized, all recorded peer data stays in the table total even if a user locks their phone, disconnects, closes the tab, or taps Leave.
-5. **Leave Warning**: Users are warned if they try to leave a table before the bill is finalized, because explicit Leave before finalization removes their data.
+4. **Snapshot Authority**: When the bill is finalized, the host publishes a `billSnapshot` and clients store it as `roomState.finalizedSnapshot`. While finalized, `syncState` is ignored and no user publishes live bill edits.
+5. **Data Locking**: When the bill is finalized, all recorded peer data stays in the table total even if a user locks their phone, disconnects, closes the tab, taps Leave, edits locally, or rejoins.
+6. **Rejoin Recovery**: A finalized rejoin restores the current user's local restaurant, plate counts, and custom items from `billSnapshot` if that user's snapshot exists. If the user was not part of the snapshot, their local table view is reset to an empty bill for the snapshot restaurant so they cannot affect finalized totals.
+7. **Active Snapshot Relay**: Active finalized clients resend the stored `billSnapshot` when another member enters, so recovery is not limited to Ably history when at least one finalized client is still present.
+8. **Edit Bill Unlock**: When the host clicks "Edit Bill", clients clear `roomState.finalizedSnapshot`, unlock controls, and resume normal live `syncState`.
+9. **Leave Warning**: Users are warned if they try to leave a table before the bill is finalized, because explicit Leave before finalization removes their data.
 
 ### G. Auto-Match Restaurant Workflow (Host Authority)
 1. **Join Event**: When a user joins a table, the app listens for the first `syncState` message from the **Host** (`roomState.hostId`).
@@ -96,6 +102,7 @@ The application manages state through two primary objects:
 
 | Date | Change | Reason |
 | :--- | :--- | :--- |
+| 2026-05-30 | **Immutable Finalized Snapshot** | Finalized bills now ignore later `syncState`; leave/edit/rejoin cannot change locked totals, and rejoin restores the user's local screen from `billSnapshot`. |
 | 2026-05-14 | **Finalize Locks Restaurant Selector** | Prevents finalized bills from switching pricing presets after totals are locked. |
 | 2026-05-30 | **Room-Scoped Host Recovery** | Host status now survives refresh for the same table and clears when joining unrelated rooms, preventing the Finalize/Edit button from disappearing or leaking. |
 | 2026-05-30 | **Presence Disconnect Preservation** | Phone lock/background disconnect now marks peers offline instead of removing them; explicit Leave removes only before finalization, and finalized bills publish a best-effort `billSnapshot`. |
@@ -117,7 +124,9 @@ The application manages state through two primary objects:
 4. **Host Persistence**: Keep host authority room-scoped with `sushi_hostId` + `sushi_hostRoomId`; never use oldest presence member as host.
 5. **Presence**: Treat `presence.leave` as offline status only; never delete peer bill data from presence alone.
 6. **Leaving**: `leaveRoom` must publish `explicitLeave`, detach from Ably, and clear local room state, but leave calculation `state` intact.
-7. **Finalized Bills**: Once finalized, all users' recorded plates/custom items remain in table totals even when users disconnect or leave. Ably recovery is best-effort unless channel persistence/history retention is configured.
+7. **Finalized Bills**: Once finalized, all users' recorded plates/custom items remain in table totals even when users disconnect, leave, edit locally, or rejoin. `billSnapshot` is the only bill authority until host clicks Edit Bill.
+8. **Finalized Sync Gate**: Do not publish or apply `syncState` while `roomState.isBillFinalized` is true. Resume live sync only after host unfinalizes.
+9. **Recovery Limits**: Ably history/persist-last is best-effort unless channel persistence/history retention is configured; active finalized clients should relay `billSnapshot` to new entrants.
 
 ## 5. Regression Checklist
 1. **Host Refresh**: Host refreshes same room and still sees "Host/You" plus Finalize/Edit.
@@ -126,3 +135,5 @@ The application manages state through two primary objects:
 4. **Restaurant Authority**: New joiners auto-match the host restaurant only when safe; joiners cannot change host/existing users.
 5. **QR/Name Rejoin**: Duplicate-name flow keeps the room context and shows inline name errors.
 6. **Presence vs Leave**: Phone lock keeps totals; explicit Leave before finalization removes; Leave after finalization preserves.
+7. **Live Rejoin**: Before finalization, a user can leave, edit locally, rejoin, and sync their current local bill into the live table.
+8. **Finalized Rejoin**: After finalization, a user can leave, edit/remove local plates, and rejoin without changing table totals; their local UI restores from the snapshot.

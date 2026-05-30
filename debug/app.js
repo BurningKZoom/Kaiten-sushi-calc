@@ -20,7 +20,8 @@ let roomState = {
     peers: {},
     hostId: localStorage.getItem('sushi_hostId') || null,
     hostRoomId: localStorage.getItem('sushi_hostRoomId') || null,
-    isBillFinalized: false
+    isBillFinalized: false,
+    finalizedSnapshot: null
 };
 localStorage.setItem('sushi_userId', roomState.myUserId);
 let currentTowerView = 'personal';
@@ -246,6 +247,7 @@ function leaveRoom() {
     roomState.myName = '';
     clearHostClaim();
     roomState.isBillFinalized = false;
+    roomState.finalizedSnapshot = null;
     localStorage.removeItem('sushi_roomId');
     localStorage.removeItem('sushi_userName');
     
@@ -265,9 +267,15 @@ function finalizeBill() {
     const actionText = newState ? "Finalize bill? This will lock counts for everyone." : "Allow everyone to edit counts again?";
     
     if (confirm(actionText)) {
+        if (!newState) {
+            roomState.isBillFinalized = false;
+            roomState.finalizedSnapshot = null;
+        }
         channel.publish('finalizeBill', { hostId: roomState.myUserId, isFinalized: newState });
         if (newState) {
-            channel.publish('billSnapshot', buildBillSnapshot(newState));
+            const snapshot = buildBillSnapshot(newState);
+            applyBillSnapshot(snapshot);
+            channel.publish('billSnapshot', snapshot);
         }
     }
 }
@@ -316,6 +324,43 @@ function buildBillSnapshot(isFinalized) {
     };
 }
 
+function calculatePlateSubtotal(type, counts = {}) {
+    const priceMap = {};
+    (restaurants[type] || []).forEach(plate => {
+        priceMap[plate.id] = plate.price;
+    });
+    return Object.entries(counts).reduce((sum, [plateId, count]) => {
+        return sum + ((priceMap[plateId] || 0) * count);
+    }, 0);
+}
+
+function restoreMyDataFromSnapshot(peer) {
+    if (!peer || !peer.restaurant || !restaurants[peer.restaurant]) return;
+
+    const type = peer.restaurant;
+    const counts = { ...(peer.counts || {}) };
+    state.data[type] = {
+        counts,
+        plateSubtotal: calculatePlateSubtotal(type, counts),
+        customItems: (peer.customItems || []).map(item => ({ ...item }))
+    };
+    state.lastActive = type;
+    document.getElementById('restaurantSelect').value = type;
+    initApp(true);
+    saveData(false);
+}
+
+function clearMyDataForFinalizedSnapshot(snapshot) {
+    if (!snapshot || !snapshot.restaurant || !restaurants[snapshot.restaurant]) return;
+
+    const type = snapshot.restaurant;
+    state.data[type] = { counts: {}, plateSubtotal: 0, customItems: [] };
+    state.lastActive = type;
+    document.getElementById('restaurantSelect').value = type;
+    initApp(true);
+    saveData(false);
+}
+
 function markPeerOffline(clientId, hasLeft = false) {
     if (clientId === roomState.myUserId) return;
     if (roomState.peers[clientId]) {
@@ -337,11 +382,25 @@ function applyBillSnapshot(snapshot) {
     if (!snapshot || snapshot.roomId !== roomState.roomId || !snapshot.peers) return;
 
     roomState.isBillFinalized = !!snapshot.isFinalized;
+    roomState.finalizedSnapshot = snapshot.isFinalized ? snapshot : null;
     applyHostId(snapshot.hostId, snapshot.roomId);
+
+    const snapshotPeerIds = new Set(Object.keys(snapshot.peers));
+    for (const id of Object.keys(roomState.peers)) {
+        if (!snapshotPeerIds.has(id)) delete roomState.peers[id];
+    }
 
     for (const [id, peer] of Object.entries(snapshot.peers)) {
         if (id !== roomState.myUserId) {
             roomState.peers[id] = clonePeerData(peer);
+        }
+    }
+
+    if (snapshot.isFinalized) {
+        if (snapshot.peers[roomState.myUserId]) {
+            restoreMyDataFromSnapshot(snapshot.peers[roomState.myUserId]);
+        } else {
+            clearMyDataForFinalizedSnapshot(snapshot);
         }
     }
 }
@@ -454,6 +513,7 @@ function initAbly() {
         channel = tempChannel;
 
         const checkAutoMatch = (peerData, peerId) => {
+            if (roomState.isBillFinalized) return;
             if (!peerData.isHost || peerId === roomState.myUserId) return;
             
             const currentRes = document.getElementById('restaurantSelect').value;
@@ -472,6 +532,7 @@ function initAbly() {
         };
 
         channel.subscribe('syncState', (message) => {
+            if (roomState.isBillFinalized) return;
             if (message.clientId !== roomState.myUserId) {
                 if (message.data.isHost) {
                     applyHostId(message.clientId);
@@ -484,6 +545,9 @@ function initAbly() {
 
         channel.subscribe('finalizeBill', (message) => {
             roomState.isBillFinalized = message.data.isFinalized;
+            if (!message.data.isFinalized) {
+                roomState.finalizedSnapshot = null;
+            }
             applyHostId(message.data.hostId);
             updateUI();
             updateLobbyUI();
@@ -508,7 +572,13 @@ function initAbly() {
                 roomState.peers[member.clientId].isOffline = false;
                 roomState.peers[member.clientId].hasLeft = false;
             }
-            if (member.clientId !== roomState.myUserId) publishMyState();
+            if (member.clientId !== roomState.myUserId) {
+                if (roomState.isBillFinalized && roomState.finalizedSnapshot) {
+                    channel.publish('billSnapshot', roomState.finalizedSnapshot);
+                } else {
+                    publishMyState();
+                }
+            }
         });
 
         channel.presence.subscribe('leave', (member) => {
@@ -519,7 +589,6 @@ function initAbly() {
 
         channel.presence.enter({ name: roomState.myName });
         
-        publishMyState();
         updateLobbyUI();
 
         channel.history({ limit: 15, direction: 'backwards' }, (err, resultPage) => {
@@ -530,9 +599,12 @@ function initAbly() {
                     }
                     if (msg.name === 'finalizeBill') {
                         roomState.isBillFinalized = msg.data.isFinalized;
+                        if (!msg.data.isFinalized) {
+                            roomState.finalizedSnapshot = null;
+                        }
                         applyHostId(msg.data.hostId);
                     }
-                    if (msg.name === 'syncState') {
+                    if (msg.name === 'syncState' && !roomState.isBillFinalized) {
                         if (msg.clientId === roomState.myUserId) {
                             if (msg.data.isHost) claimHost(roomState.roomId);
                         } else {
@@ -562,6 +634,13 @@ function initAbly() {
                 updateUsersList(); updateUI(); renderTower();
                 updateLobbyUI();
             }
+            if (!roomState.isBillFinalized) {
+                publishMyState();
+            } else if (roomState.finalizedSnapshot) {
+                applyBillSnapshot(roomState.finalizedSnapshot);
+                updateUsersList(); updateUI(); renderTower();
+                updateLobbyUI();
+            }
         });
     });
 }
@@ -585,7 +664,7 @@ function updateUsersList() {
 }
 
 function publishMyState() {
-    if (!channel || !roomState.roomId) return;
+    if (!channel || !roomState.roomId || roomState.isBillFinalized) return;
     const type = document.getElementById('restaurantSelect').value;
     const currentData = state.data[type];
     channel.publish('syncState', {
@@ -640,12 +719,12 @@ function getBudgetValue() {
     return parseFloat(document.getElementById('targetPrice').value.replace(/,/g, '')) || 0;
 }
 
-function saveData() {
+function saveData(shouldPublish = true) {
     state.timestamp = Date.now();
     state.lastActive = document.getElementById('restaurantSelect').value;
     state.targetPrice = document.getElementById('targetPrice').value;
     localStorage.setItem('sushi_calc_v2', JSON.stringify(state));
-    publishMyState();
+    if (shouldPublish) publishMyState();
 }
 
 function loadData() {
